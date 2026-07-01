@@ -42,7 +42,7 @@ export default function Login() {
 
       {/* ── LEFT PANEL ──────────────────────────────────── */}
       <div style={{
-        width: '42%', minWidth: 340, flexShrink: 0,
+        width: '42%', flexShrink: 0,
         background: 'linear-gradient(160deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)',
         display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
         padding: '48px 48px',
@@ -68,17 +68,10 @@ export default function Login() {
 
         {/* Logo */}
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 9,
-              background: 'linear-gradient(135deg, #334155 0%, #475569 100%)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-            }}>
-              <span style={{ color: '#fff', fontSize: 15, fontWeight: 800, fontFamily: 'Georgia, serif' }}>O</span>
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+            <div style={{ background: '#fff', borderRadius: 10, padding: '5px 10px', display: 'inline-flex', alignItems: 'center' }}>
+              <img src="/operalynLogo.png" alt="Operalyn" style={{ height: 26, width: 'auto', objectFit: 'contain' }} />
             </div>
-            <span style={{ fontSize: 20, fontWeight: 700, color: '#F8FAFC', letterSpacing: '-0.02em' }}>Operalyn</span>
           </Link>
         </div>
 
@@ -132,7 +125,7 @@ export default function Login() {
       <div style={{
         flex: 1, background: '#F8FAFC',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '48px 24px',
+        padding: '48px 24px', overflowY: 'auto',
       }}>
         <div style={{ width: '100%', maxWidth: 400 }}>
 
@@ -313,7 +306,7 @@ export default function Login() {
       {/* Spinner animation */}
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
           div[style*="width: 42%"] { display: none !important; }
         }
       `}</style>

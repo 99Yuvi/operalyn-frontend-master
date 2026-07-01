@@ -209,6 +209,8 @@ export default function Landing() {
       ? '/freelancer'
       : '/client'
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   const [heroRef,   heroVis]   = useReveal(0.05)
   const [statsRef,  statsVis]  = useReveal(0.1)
   const [stepsRef,  stepsVis]  = useReveal(0.1)
@@ -234,53 +236,64 @@ export default function Landing() {
       }}>
         <div style={{ maxWidth: 1160, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 8,
-              background: `linear-gradient(135deg, ${C.accent} 0%, #475569 100%)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 1px 3px rgba(51,65,85,0.3)',
-            }}>
-              <span style={{ color: '#fff', fontSize: 14, fontWeight: 800, fontFamily: 'Georgia, serif' }}>O</span>
-            </div>
-            <span style={{ fontSize: 18, fontWeight: 700, color: C.accent, letterSpacing: '-0.02em' }}>
-              Operalyn
-            </span>
-          </div>
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+            <img src="/operalynLogo.png" alt="Operalyn" style={{ height: 36, width: 'auto', objectFit: 'contain' }} />
+          </Link>
 
-          {/* Nav links */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {/* Desktop nav links */}
+          <div className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Link to="/about" style={{ padding: '8px 14px', fontSize: 14, fontWeight: 500, color: C.muted, textDecoration: 'none', borderRadius: 8, transition: 'color 0.15s, background 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.background = C.ground2 }}
+              onMouseLeave={e => { e.currentTarget.style.color = C.muted; e.currentTarget.style.background = 'transparent' }}
+            >About</Link>
             {user ? (
-              <Link to={dashboardPath}
-                style={btnPrimary}
-                onMouseEnter={e => { e.currentTarget.style.background = C.accentHover; e.currentTarget.style.transform = 'translateY(-1px)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'none' }}
-              >
-                Dashboard →
-              </Link>
+              <Link to={dashboardPath} style={btnPrimary}>Dashboard →</Link>
             ) : (
               <>
-                <Link to="/auth/login" style={{
-                  padding: '8px 16px', fontSize: 14, fontWeight: 500, color: C.muted,
-                  textDecoration: 'none', borderRadius: 8,
-                  transition: 'color 0.15s, background 0.15s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.background = C.ground2 }}
-                onMouseLeave={e => { e.currentTarget.style.color = C.muted; e.currentTarget.style.background = 'transparent' }}
-                >
-                  Sign in
-                </Link>
-                <Link to="/auth/register"
-                  style={btnPrimary}
-                  onMouseEnter={e => { e.currentTarget.style.background = C.accentHover; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(51,65,85,0.25)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)' }}
-                >
-                  Get started
-                </Link>
+                <Link to="/auth/login" style={{ padding: '8px 16px', fontSize: 14, fontWeight: 500, color: C.muted, textDecoration: 'none', borderRadius: 8, transition: 'color 0.15s, background 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.background = C.ground2 }}
+                  onMouseLeave={e => { e.currentTarget.style.color = C.muted; e.currentTarget.style.background = 'transparent' }}
+                >Sign in</Link>
+                <Link to="/auth/register" style={btnPrimary}>Get started</Link>
               </>
             )}
           </div>
+
+          {/* Mobile hamburger */}
+          <button
+            className="nav-hamburger"
+            onClick={() => setMobileMenuOpen(o => !o)}
+            style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: 8, color: C.text }}
+            aria-label="Toggle menu"
+          >
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              {mobileMenuOpen
+                ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                : <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />}
+            </svg>
+          </button>
         </div>
+
+        {/* Mobile menu dropdown */}
+        {mobileMenuOpen && (
+          <div style={{
+            position: 'absolute', top: 64, left: 0, right: 0, zIndex: 100,
+            background: 'rgba(255,255,255,0.98)', backdropFilter: 'blur(16px)',
+            borderBottom: `1px solid ${C.border}`,
+            padding: '16px 20px 20px',
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}>
+            <Link to="/about" onClick={() => setMobileMenuOpen(false)} style={{ padding: '10px 12px', fontSize: 15, fontWeight: 500, color: C.text, textDecoration: 'none', borderRadius: 8 }}>About</Link>
+            {user ? (
+              <Link to={dashboardPath} onClick={() => setMobileMenuOpen(false)} style={{ ...btnPrimary, textAlign: 'center', justifyContent: 'center' }}>Dashboard →</Link>
+            ) : (
+              <>
+                <Link to="/auth/login" onClick={() => setMobileMenuOpen(false)} style={{ padding: '10px 12px', fontSize: 15, fontWeight: 500, color: C.text, textDecoration: 'none', borderRadius: 8 }}>Sign in</Link>
+                <Link to="/auth/register" onClick={() => setMobileMenuOpen(false)} style={{ ...btnPrimary, textAlign: 'center', justifyContent: 'center' }}>Get started</Link>
+              </>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* ── HERO ─────────────────────────────────────────── */}
@@ -494,7 +507,7 @@ export default function Landing() {
                 background: '#fff',
                 border: `1px solid ${C.border}`,
                 borderRight: i < STEPS.length - 1 ? 'none' : `1px solid ${C.border}`,
-                borderRadius: i === 0 ? '14px 0 0 14px' : i === STEPS.length - 1 ? '0 14px 14px 0' : '0',
+                borderRadius: 14,
                 padding: '36px 28px',
                 position: 'relative',
                 ...staggerSteps[i],
@@ -529,9 +542,9 @@ export default function Landing() {
                   </Link>
                 )}
 
-                {/* Connector arrow between steps */}
+                {/* Connector arrow between steps — hidden on mobile */}
                 {i < STEPS.length - 1 && (
-                  <div style={{
+                  <div className="step-connector" style={{
                     position: 'absolute', right: -12, top: '50%', transform: 'translateY(-50%)',
                     width: 24, height: 24, background: '#fff',
                     border: `1px solid ${C.border}`, borderRadius: '50%',
@@ -793,53 +806,102 @@ export default function Landing() {
 
       {/* ── FOOTER ────────────────────────────────────────── */}
       <footer style={{ borderTop: `1px solid ${C.border}`, background: C.ground2 }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 24px 28px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 40, alignItems: 'start', marginBottom: 32 }}>
-            {/* Brand */}
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '48px 24px 32px' }}>
+
+          {/* Top grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr', gap: 40, alignItems: 'start', marginBottom: 40 }}>
+
+            {/* Brand + company info */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: 7,
-                  background: `linear-gradient(135deg, ${C.accent} 0%, #475569 100%)`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span style={{ color: '#fff', fontSize: 12, fontWeight: 800, fontFamily: 'Georgia, serif' }}>O</span>
-                </div>
-                <span style={{ fontSize: 16, fontWeight: 700, color: C.accent }}>Operalyn</span>
-              </div>
-              <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, maxWidth: 220 }}>
-                India's professional freelance network. Milestone-based. INR payouts.
+              <img src="/operalynLogo.png" alt="Operalyn" style={{ height: 34, width: 'auto', objectFit: 'contain', marginBottom: 14 }} />
+              <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.65, marginBottom: 16, maxWidth: 240 }}>
+                India's professional freelance network. Milestone-based payments. INR payouts via Razorpay.
               </p>
+              {/* Contact */}
+              <a href="mailto:operalyn.freelancenetwork@gmail.com" style={{
+                fontSize: 12, color: C.muted, textDecoration: 'none', display: 'block', marginBottom: 4,
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = C.text}
+              onMouseLeave={e => e.currentTarget.style.color = C.muted}
+              >
+                📧 operalyn.freelancenetwork@gmail.com
+              </a>
             </div>
 
-            {/* Links */}
-            {[
-              { heading: 'Platform', links: [['Post a project', '/auth/register'], ['Browse projects', '/auth/register'], ['How it works', '/auth/register']] },
-              { heading: 'Freelancers', links: [['Create profile', '/auth/register'], ['Browse projects', '/auth/register'], ['How to get paid', '/auth/register']] },
-              { heading: 'Legal', links: [['Terms of service', '/auth/register'], ['Privacy policy', '/auth/register'], ['Sign in', '/auth/login']] },
-            ].map(({ heading, links }) => (
-              <div key={heading}>
-                <p style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 12, letterSpacing: '0.02em' }}>{heading}</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {links.map(([label, to]) => (
-                    <Link key={label} to={to} style={{
-                      fontSize: 13, color: C.muted, textDecoration: 'none',
-                      transition: 'color 0.15s',
-                    }}
+            {/* Platform links */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 14, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Platform</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {[['Post a project', '/auth/register'], ['Browse freelancers', '/auth/register'], ['How it works', '/auth/register'], ['Sign in', '/auth/login']].map(([label, to]) => (
+                  <Link key={label} to={to} style={{ fontSize: 13, color: C.muted, textDecoration: 'none', transition: 'color 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.color = C.text}
-                    onMouseLeave={e => e.currentTarget.style.color = C.muted}
-                    >
-                      {label}
-                    </Link>
-                  ))}
-                </div>
+                    onMouseLeave={e => e.currentTarget.style.color = C.muted}>
+                    {label}
+                  </Link>
+                ))}
               </div>
-            ))}
+            </div>
+
+            {/* Freelancers links */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 14, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Freelancers</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {[['Create a profile', '/auth/register'], ['Browse projects', '/auth/register'], ['How to get paid', '/auth/register'], ['My proposals', '/auth/register']].map(([label, to]) => (
+                  <Link key={label} to={to} style={{ fontSize: 13, color: C.muted, textDecoration: 'none', transition: 'color 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.color = C.text}
+                    onMouseLeave={e => e.currentTarget.style.color = C.muted}>
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Company links */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 14, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Company</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {[['About us', '/about'], ['Terms of service', '/auth/register'], ['Privacy policy', '/auth/register'], ['Contact us', '/about']].map(([label, to]) => (
+                  <Link key={label} to={to} style={{ fontSize: 13, color: C.muted, textDecoration: 'none', transition: 'color 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.color = C.text}
+                    onMouseLeave={e => e.currentTarget.style.color = C.muted}>
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20 }}>
+          {/* Company details strip */}
+          <div style={{
+            borderTop: `1px solid ${C.border}`, paddingTop: 24, marginBottom: 16,
+            background: '#F1F5F9', borderRadius: 12, padding: '20px 24px',
+            marginTop: 8,
+          }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: C.text, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>
+              Registered Company Details
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '8px 32px' }}>
+              {[
+                ['Company', 'OPERALYN FREELANCE NETWORK SERVICES PRIVATE LIMITED'],
+                ['CIN', 'U62020RI2026PTC113939'],
+                ['GST', '08AAFCO1644L1Z8'],
+                ['Address', 'Unit No.TB-404, 4th Floor, R-Tech Capital Highstreet Mall, Mahal Road, Jagatpura, Jaipur, Rajasthan – 302017'],
+              ].map(([key, val]) => (
+                <div key={key} style={{ display: 'flex', gap: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: C.muted, flexShrink: 0, minWidth: 56 }}>{key}:</span>
+                  <span style={{ fontSize: 11, color: C.text }}>{val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
             <p style={{ fontSize: 12, color: C.subtle }}>
-              © {new Date().getFullYear()} Operalyn Freelance Network Services Pvt. Ltd. · India
+              © {new Date().getFullYear()} Operalyn Freelance Network Services Private Limited · All rights reserved.
+            </p>
+            <p style={{ fontSize: 12, color: C.subtle }}>
+              Made in 🇮🇳 India
             </p>
           </div>
         </div>
@@ -850,11 +912,24 @@ export default function Landing() {
         @media (prefers-reduced-motion: reduce) {
           * { transition: none !important; animation: none !important; }
         }
+
+        /* Nav: show hamburger, hide desktop links on mobile */
+        @media (max-width: 640px) {
+          .nav-desktop { display: none !important; }
+          .nav-hamburger { display: flex !important; }
+        }
+
+        /* Steps: single column + hide connectors on mobile */
         @media (max-width: 768px) {
+          .step-connector { display: none !important; }
+
           section > div[style*="grid-template-columns: 1fr 1fr"] {
             grid-template-columns: 1fr !important;
           }
           section > div[style*="grid-template-columns: repeat(3"] {
+            grid-template-columns: 1fr !important;
+          }
+          section > div[style*="grid-template-columns: repeat(3, 1fr)"] {
             grid-template-columns: 1fr !important;
           }
           section > div[style*="grid-template-columns: repeat(4"] {
@@ -864,6 +939,15 @@ export default function Landing() {
             grid-template-columns: 1fr 1fr !important;
           }
         }
+
+        /* Steps section: fix border between stacked cards */
+        @media (max-width: 768px) {
+          section > div[style*="grid-template-columns: repeat(3"] > div {
+            border-right: 1px solid #E2E8F0 !important;
+            border-radius: 14px !important;
+          }
+        }
+
         @media (max-width: 480px) {
           footer > div[style*="grid-template-columns"] {
             grid-template-columns: 1fr !important;

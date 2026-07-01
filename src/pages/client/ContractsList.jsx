@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
 import { useContracts } from '@/hooks/useContracts'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
+import { FileText } from 'lucide-react'
 
 const CS = {
-  active:    'bg-blue-50 text-blue-700',
-  completed: 'bg-green-50 text-green-700',
-  cancelled: 'bg-slate-100 text-slate-500',
+  active:    'bg-blue-50 text-blue-700 border border-blue-200',
+  completed: 'bg-green-50 text-green-700 border border-green-200',
+  cancelled: 'bg-slate-100 text-slate-500 border border-slate-200',
 }
 
 export default function ClientContractsList() {
@@ -14,14 +15,16 @@ export default function ClientContractsList() {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-slate-800 mb-1" style={{ fontFamily: 'Georgia, serif' }}>Contracts</h2>
+      <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-1">Contracts</h2>
       <p className="text-sm text-slate-500 mb-6">Ongoing and completed engagements with freelancers.</p>
 
       {isLoading ? (
         <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-24 rounded-xl bg-slate-100 animate-pulse" />)}</div>
       ) : contracts.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-slate-200 p-12 text-center">
-          <p className="text-3xl mb-2">📝</p>
+          <div className="h-14 w-14 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-4">
+            <FileText className="h-7 w-7 text-purple-400" />
+          </div>
           <p className="text-base font-semibold text-slate-700 mb-1">No contracts yet</p>
           <p className="text-sm text-slate-500 mb-4">Hire a freelancer on one of your projects to start a contract.</p>
           <Link to="/client/projects" className="inline-block rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">

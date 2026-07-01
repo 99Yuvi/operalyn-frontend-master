@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom'
 import { useMyProjects } from '@/hooks/useProjects'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { FolderOpen } from 'lucide-react'
 
 const STATUS_BADGE = {
-  draft:       'bg-slate-100 text-slate-500',
-  open:        'bg-green-50 text-green-700',
-  in_progress: 'bg-blue-50 text-blue-700',
-  completed:   'bg-purple-50 text-purple-700',
-  cancelled:   'bg-red-50 text-red-600',
+  draft:       'bg-slate-100 text-slate-500 border border-slate-200',
+  open:        'bg-green-50 text-green-700 border border-green-200',
+  in_progress: 'bg-blue-50 text-blue-700 border border-blue-200',
+  completed:   'bg-purple-50 text-purple-700 border border-purple-200',
+  cancelled:   'bg-red-50 text-red-600 border border-red-200',
 }
 
 export default function MyProjects() {
@@ -18,7 +19,7 @@ export default function MyProjects() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Georgia, serif' }}>My Projects</h2>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">My Projects</h2>
           <p className="text-sm text-slate-500 mt-0.5">Projects you've posted on the platform.</p>
         </div>
         <Link to="/client/projects/new"
@@ -35,7 +36,9 @@ export default function MyProjects() {
         </div>
       ) : projects.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-slate-200 p-12 text-center">
-          <p className="text-3xl mb-3">📋</p>
+          <div className="h-14 w-14 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4">
+            <FolderOpen className="h-7 w-7 text-blue-400" />
+          </div>
           <h3 className="text-base font-semibold text-slate-700 mb-1">No projects yet</h3>
           <p className="text-sm text-slate-500 mb-4">Post your first project to start receiving proposals from freelancers.</p>
           <Link to="/client/projects/new" className="inline-block rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">

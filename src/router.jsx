@@ -52,12 +52,14 @@ import ReviewForm              from '@/pages/shared/ReviewForm'
 
 // Public
 import Landing  from '@/pages/public/Landing'
+import About    from '@/pages/public/About'
 import NotFound from '@/pages/errors/NotFound'
 import Forbidden from '@/pages/errors/Forbidden'
 
 export const router = createBrowserRouter([
   // ── Public landing ────────────────────────────────────────────────────
   { path: '/',                     element: <Landing /> },
+  { path: '/about',                element: <About /> },
   { path: '/auth/login',           element: <Login /> },
   { path: '/auth/register',        element: <Register /> },
   { path: '/auth/forgot-password', element: <ForgotPassword /> },
