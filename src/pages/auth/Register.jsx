@@ -437,9 +437,9 @@ export default function Register() {
           {/* Footer note */}
           <p style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', marginTop: 20, lineHeight: 1.6 }}>
             By creating an account, you agree to our{' '}
-            <Link to="/" style={{ color: '#64748B', textDecoration: 'underline' }}>Terms of Service</Link>
+            <Link to="/terms" style={{ color: '#64748B', textDecoration: 'underline' }}>Terms of Service</Link>
             {' '}and{' '}
-            <Link to="/" style={{ color: '#64748B', textDecoration: 'underline' }}>Privacy Policy</Link>.
+            <Link to="/privacy" style={{ color: '#64748B', textDecoration: 'underline' }}>Privacy Policy</Link>.
           </p>
         </div>
       </div>
