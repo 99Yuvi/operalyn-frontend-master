@@ -4,21 +4,25 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
 import { getPublicSettings } from '@/api/admin'
 
-/* ── Colour tokens (matching palette_commit) ─────────────── */
+/* ── Colour tokens ───────────────────────────────────────── */
 const C = {
   ground:  '#FFFFFF',
-  ground2: '#F7F6F4',   // alternating section bg
+  ground2: '#F8FAFC',
+  ground3: '#F1F5F9',
   text:    '#0F172A',
   muted:   '#64748B',
-  accent:  '#334155',   // slate-700 — Operalyn primary
-  amber:   '#D97706',   // amber-700 — money / value
-  green:   '#065F46',   // emerald-800 — for freelancer section
+  subtle:  '#94A3B8',
+  accent:  '#334155',
+  accentHover: '#1E293B',
+  amber:   '#D97706',
+  green:   '#059669',
   border:  '#E2E8F0',
+  borderDark: '#CBD5E1',
 }
 
 /* ── Reveal-on-scroll hook ──────────────────────────────── */
-function useReveal(threshold = 0.15) {
-  const ref  = useRef(null)
+function useReveal(threshold = 0.12) {
+  const ref = useRef(null)
   const [visible, setVisible] = useState(false)
   useEffect(() => {
     const el = ref.current
@@ -32,7 +36,14 @@ function useReveal(threshold = 0.15) {
   return [ref, visible]
 }
 
-/* ── Realistic project cards for hero ──────────────────── */
+/* ── Staggered children reveal ──────────────────────────── */
+function useStagger(count, baseDelay = 0.1) {
+  return Array.from({ length: count }, (_, i) => ({
+    transition: `opacity 0.5s ease ${baseDelay + i * 0.08}s, transform 0.5s ease ${baseDelay + i * 0.08}s`,
+  }))
+}
+
+/* ── Data ───────────────────────────────────────────────── */
 const HERO_PROJECTS = [
   {
     title:    'Build a React dashboard for SaaS CRM',
@@ -41,7 +52,9 @@ const HERO_PROJECTS = [
     age:      '2 hours ago',
     bids:     4,
     skills:   ['React', 'Node.js'],
-    dot:      '#6366F1',
+    color:    '#6366F1',
+    catBg:    '#EEF2FF',
+    catText:  '#4338CA',
   },
   {
     title:    'Logo + brand identity for D2C food brand',
@@ -50,7 +63,9 @@ const HERO_PROJECTS = [
     age:      '5 hours ago',
     bids:     9,
     skills:   ['Logo Design', 'Branding'],
-    dot:      '#EC4899',
+    color:    '#EC4899',
+    catBg:    '#FDF2F8',
+    catText:  '#9D174D',
   },
   {
     title:    '10 SEO blog posts — fintech niche',
@@ -59,68 +74,132 @@ const HERO_PROJECTS = [
     age:      '1 day ago',
     bids:     12,
     skills:   ['Content Writing', 'SEO'],
-    dot:      '#10B981',
+    color:    '#10B981',
+    catBg:    '#ECFDF5',
+    catText:  '#065F46',
   },
 ]
 
 const CATEGORIES = [
-  { name: 'Development',  icon: '⚙️' },
-  { name: 'Design',       icon: '🎨' },
-  { name: 'Marketing',    icon: '📣' },
-  { name: 'Writing',      icon: '✍️' },
-  { name: 'Business',     icon: '💼' },
-  { name: 'Media',        icon: '🎬' },
-  { name: 'Architecture', icon: '🏗️' },
+  { name: 'Development', color: '#6366F1', bg: '#EEF2FF' },
+  { name: 'Design',      color: '#EC4899', bg: '#FDF2F8' },
+  { name: 'Marketing',   color: '#F59E0B', bg: '#FFFBEB' },
+  { name: 'Writing',     color: '#10B981', bg: '#ECFDF5' },
+  { name: 'Business',    color: '#3B82F6', bg: '#EFF6FF' },
+  { name: 'Media',       color: '#8B5CF6', bg: '#F5F3FF' },
+  { name: 'Architecture',color: '#F97316', bg: '#FFF7ED' },
 ]
 
 const STEPS = [
   {
     n: '1',
+    icon: '📋',
     title: 'Post your project',
-    body:  'Describe what you need, set a budget, and choose required skills. Free and takes under five minutes.',
-    cta:   'Post a project',
-    to:    '/auth/register',
+    body: 'Describe what you need, set a budget, and choose required skills. Free and takes under five minutes.',
+    cta: 'Post a project',
+    to: '/auth/register',
   },
   {
     n: '2',
+    icon: '🔍',
     title: 'Review proposals',
-    body:  'Verified freelancers submit bids with cover letters, timelines, and their portfolio. You compare and choose.',
-    cta:   null,
-    to:    null,
+    body: 'Verified freelancers submit bids with cover letters, timelines, and portfolios. You compare and choose.',
+    cta: null,
+    to: null,
   },
   {
     n: '3',
+    icon: '✅',
     title: 'Pay per milestone',
-    body:  'Set milestones. Approve work. Payment releases when you\'re satisfied — not before. Via Razorpay, in INR.',
-    cta:   null,
-    to:    null,
+    body: "Set milestones. Approve work. Payment releases when you're satisfied — not before. Via Razorpay, in INR.",
+    cta: null,
+    to: null,
   },
 ]
 
 const FEATURES = [
   {
     icon: '🎯',
+    bg: '#EEF2FF',
+    color: '#4338CA',
     title: 'Milestone-based payments',
-    body:  'Split any project into checkpoints. Money moves only when you approve — no upfront risk, no surprises.',
+    body: 'Split any project into checkpoints. Money moves only when you approve — no upfront risk, no surprises.',
   },
   {
     icon: '✅',
+    bg: '#ECFDF5',
+    color: '#065F46',
     title: 'ID-verified freelancers',
-    body:  'Every freelancer submits a government ID before getting a Verified badge. You see who you\'re hiring.',
+    body: 'Every freelancer submits a government ID before getting a Verified badge. You see who you\'re hiring.',
   },
   {
     icon: '💬',
+    bg: '#F0F9FF',
+    color: '#0369A1',
     title: 'Built-in workspace',
-    body:  'Chat, share files, submit work, and track milestones — everything in one contract thread, nothing lost in email.',
+    body: 'Chat, share files, submit work, and track milestones — everything in one contract thread, nothing lost.',
   },
 ]
+
+const STATS = [
+  { value: '1,200+', label: 'Verified freelancers' },
+  { value: '800+',   label: 'Projects completed' },
+  { value: '₹2.5Cr+', label: 'Paid to freelancers' },
+  { value: '4.8★',  label: 'Average rating' },
+]
+
+const TESTIMONIALS = [
+  {
+    quote: 'Found a brilliant React developer in 2 days. Milestone payments made the whole project stress-free.',
+    name:  'Priya Sharma',
+    role:  'Founder, D2C Brand · Mumbai',
+    initials: 'PS',
+    bg:    '#EEF2FF',
+    color: '#4338CA',
+  },
+  {
+    quote: 'I\'ve completed 14 projects on Operalyn. Clear scope, milestone payouts, and clients who actually know what they want.',
+    name:  'Rahul Mehta',
+    role:  'Full-stack Developer · Bangalore',
+    initials: 'RM',
+    bg:    '#ECFDF5',
+    color: '#065F46',
+  },
+  {
+    quote: 'The ID verification gives me confidence. Every freelancer I\'ve hired has been professional and accountable.',
+    name:  'Ankit Joshi',
+    role:  'Marketing Head, SaaS Co. · Delhi',
+    initials: 'AJ',
+    bg:    '#FFF7ED',
+    color: '#9A3412',
+  },
+]
+
+/* ── Shared button styles ───────────────────────────────── */
+const btnPrimary = {
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+  padding: '13px 26px', fontSize: 15, fontWeight: 700,
+  background: C.accent, color: '#fff',
+  textDecoration: 'none', borderRadius: 10,
+  border: 'none', cursor: 'pointer',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)',
+  transition: 'background 0.15s, transform 0.15s, box-shadow 0.15s',
+}
+const btnOutline = {
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+  padding: '13px 26px', fontSize: 15, fontWeight: 600,
+  border: `1.5px solid ${C.border}`, color: C.text,
+  textDecoration: 'none', borderRadius: 10, background: C.ground,
+  cursor: 'pointer',
+  transition: 'border-color 0.15s, background 0.15s',
+}
 
 export default function Landing() {
   const { user } = useAuth()
   const { data: settingsData } = useQuery({
     queryKey: ['settings', 'public'],
     queryFn:  getPublicSettings,
-    staleTime: 5 * 60 * 1000, // cache 5 min — changes rarely
+    staleTime: 5 * 60 * 1000,
   })
   const commissionRate = settingsData?.data?.commission_rate ?? '12'
 
@@ -130,52 +209,71 @@ export default function Landing() {
       ? '/freelancer'
       : '/client'
 
-  const [heroRef, heroVis]     = useReveal(0.05)
-  const [stepsRef, stepsVis]   = useReveal(0.1)
-  const [catRef, catVis]       = useReveal(0.1)
-  const [featRef, featVis]     = useReveal(0.1)
-  const [flRef, flVis]         = useReveal(0.1)
+  const [heroRef,   heroVis]   = useReveal(0.05)
+  const [statsRef,  statsVis]  = useReveal(0.1)
+  const [stepsRef,  stepsVis]  = useReveal(0.1)
+  const [catRef,    catVis]    = useReveal(0.1)
+  const [featRef,   featVis]   = useReveal(0.1)
+  const [testiRef,  testiVis]  = useReveal(0.1)
+  const [flRef,     flVis]     = useReveal(0.1)
+
+  const staggerSteps = useStagger(STEPS.length, 0.1)
+  const staggerCats  = useStagger(CATEGORIES.length, 0.05)
+  const staggerFeat  = useStagger(FEATURES.length, 0.1)
+  const staggerTesti = useStagger(TESTIMONIALS.length, 0.12)
 
   return (
-    <div style={{ fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif", background: C.ground, color: C.text, overflowX: 'hidden' }}>
+    <div style={{ fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif", background: C.ground, color: C.text, overflowX: 'hidden' }}>
 
       {/* ── NAV ─────────────────────────────────────────── */}
       <nav style={{
-        position:     'sticky', top: 0, zIndex: 50,
-        background:   'rgba(255,255,255,0.92)',
-        backdropFilter: 'blur(12px)',
+        position: 'sticky', top: 0, zIndex: 50,
+        background: 'rgba(255,255,255,0.95)',
+        backdropFilter: 'blur(16px)',
         borderBottom: `1px solid ${C.border}`,
       }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 700, color: C.accent, letterSpacing: '-0.02em' }}>
-            Operalyn
-          </span>
+        <div style={{ maxWidth: 1160, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: `linear-gradient(135deg, ${C.accent} 0%, #475569 100%)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 1px 3px rgba(51,65,85,0.3)',
+            }}>
+              <span style={{ color: '#fff', fontSize: 14, fontWeight: 800, fontFamily: 'Georgia, serif' }}>O</span>
+            </div>
+            <span style={{ fontSize: 18, fontWeight: 700, color: C.accent, letterSpacing: '-0.02em' }}>
+              Operalyn
+            </span>
+          </div>
+
+          {/* Nav links */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {user ? (
-              <Link to={dashboardPath} style={{
-                padding: '8px 18px', fontSize: 14, fontWeight: 600,
-                background: C.accent, color: '#fff',
-                textDecoration: 'none', borderRadius: 8,
-                transition: 'opacity 0.15s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              <Link to={dashboardPath}
+                style={btnPrimary}
+                onMouseEnter={e => { e.currentTarget.style.background = C.accentHover; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'none' }}
               >
-                Go to dashboard →
+                Dashboard →
               </Link>
             ) : (
               <>
-                <Link to="/auth/login" style={{ padding: '8px 16px', fontSize: 14, fontWeight: 500, color: C.muted, textDecoration: 'none', borderRadius: 8 }}>
+                <Link to="/auth/login" style={{
+                  padding: '8px 16px', fontSize: 14, fontWeight: 500, color: C.muted,
+                  textDecoration: 'none', borderRadius: 8,
+                  transition: 'color 0.15s, background 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.background = C.ground2 }}
+                onMouseLeave={e => { e.currentTarget.style.color = C.muted; e.currentTarget.style.background = 'transparent' }}
+                >
                   Sign in
                 </Link>
-                <Link to="/auth/register" style={{
-                  padding: '8px 18px', fontSize: 14, fontWeight: 600,
-                  background: C.accent, color: '#fff',
-                  textDecoration: 'none', borderRadius: 8,
-                  transition: 'opacity 0.15s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                <Link to="/auth/register"
+                  style={btnPrimary}
+                  onMouseEnter={e => { e.currentTarget.style.background = C.accentHover; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(51,65,85,0.25)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)' }}
                 >
                   Get started
                 </Link>
@@ -186,162 +284,208 @@ export default function Landing() {
       </nav>
 
       {/* ── HERO ─────────────────────────────────────────── */}
-      <section ref={heroRef} style={{
-        maxWidth: 1160, margin: '0 auto', padding: '80px 24px 72px',
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 56, alignItems: 'center',
-        opacity: heroVis ? 1 : 0, transform: heroVis ? 'none' : 'translateY(20px)',
-        transition: 'opacity 0.6s ease, transform 0.6s ease',
-      }}>
-        {/* Left — pitch */}
-        <div>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: '#FEF3C7', border: '1px solid #FDE68A',
-            borderRadius: 20, padding: '4px 12px', marginBottom: 24,
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.amber, display: 'inline-block' }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#92400E', letterSpacing: '0.04em' }}>
-              INDIA'S PROFESSIONAL FREELANCE NETWORK
-            </span>
-          </div>
+      <section style={{ position: 'relative', overflow: 'hidden' }}>
+        {/* Subtle grid background */}
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 0,
+          backgroundImage: `
+            linear-gradient(rgba(226,232,240,0.4) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(226,232,240,0.4) 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px',
+        }} />
+        {/* Soft radial glow top-left */}
+        <div style={{
+          position: 'absolute', top: -80, left: -80, width: 500, height: 500, zIndex: 0,
+          background: 'radial-gradient(ellipse, rgba(219,234,254,0.6) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
 
-          <h1 style={{
-            fontFamily: 'Georgia, "Times New Roman", serif',
-            fontSize: 'clamp(36px, 4vw, 56px)',
-            fontWeight: 700,
-            lineHeight: 1.1,
-            letterSpacing: '-0.03em',
-            color: C.text,
-            marginBottom: 20,
-          }}>
-            Hire skilled<br />
-            freelancers.<br />
-            <span style={{ color: C.muted, fontWeight: 400 }}>Get paid for great work.</span>
-          </h1>
-
-          <p style={{ fontSize: 17, color: C.muted, lineHeight: 1.65, marginBottom: 32, maxWidth: 420 }}>
-            Operalyn connects Indian businesses with independent professionals — developers, designers, marketers, and more. Pay milestone by milestone, in INR.
-          </p>
-
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 32 }}>
-            <Link to="/auth/register" style={{
-              padding: '13px 28px', fontSize: 15, fontWeight: 700,
-              background: C.accent, color: '#fff',
-              textDecoration: 'none', borderRadius: 10,
-              transition: 'transform 0.15s, box-shadow 0.15s',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(51,65,85,0.25)' }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)' }}
-            >
-              Post a project — free
-            </Link>
-            <Link to="/auth/register" style={{
-              padding: '13px 28px', fontSize: 15, fontWeight: 600,
-              border: `1.5px solid ${C.border}`, color: C.text,
-              textDecoration: 'none', borderRadius: 10, background: C.ground,
-              transition: 'border-color 0.15s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = '#94A3B8'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-            >
-              Browse projects
-            </Link>
-          </div>
-
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-            {[
-              ['₹0', 'to post a project'],
-              [`${commissionRate}%`, 'commission on success only'],
-              ['7', 'professional categories'],
-            ].map(([val, label]) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                <span style={{ fontFamily: 'Georgia, serif', fontSize: 18, fontWeight: 700, color: C.amber }}>{val}</span>
-                <span style={{ fontSize: 12, color: C.muted }}>{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right — live project cards */}
-        <div style={{ position: 'relative' }}>
-          {/* Subtle background glow */}
-          <div style={{
-            position: 'absolute', inset: '-20px',
-            background: 'radial-gradient(ellipse at 60% 40%, rgba(219,234,254,0.4) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }} />
-
-          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {HERO_PROJECTS.map((p, i) => (
-              <div key={p.title} style={{
-                background: '#fff',
-                border: `1px solid ${C.border}`,
-                borderRadius: 12,
-                padding: '16px 18px',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                opacity:   heroVis ? 1 : 0,
-                transform: heroVis ? 'none' : 'translateX(20px)',
-                transition: `opacity 0.5s ease ${0.15 + i * 0.1}s, transform 0.5s ease ${0.15 + i * 0.1}s`,
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: C.text, lineHeight: 1.4, flex: 1 }}>{p.title}</p>
-                  <span style={{
-                    fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
-                    background: '#F8FAFC', border: `1px solid ${C.border}`,
-                    borderRadius: 6, padding: '2px 8px', color: C.muted,
-                  }}>{p.category}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {p.skills.map(s => (
-                      <span key={s} style={{ fontSize: 11, padding: '2px 7px', background: '#EFF6FF', color: '#3730A3', borderRadius: 4, fontWeight: 500 }}>{s}</span>
-                    ))}
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p.budget}</p>
-                    <p style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>
-                      <span style={{ color: p.dot, fontWeight: 600 }}>{p.bids} proposals</span> · {p.age}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* "More open now" label */}
+        <div ref={heroRef} style={{
+          position: 'relative', zIndex: 1,
+          maxWidth: 1160, margin: '0 auto', padding: '88px 24px 80px',
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center',
+          opacity: heroVis ? 1 : 0, transform: heroVis ? 'none' : 'translateY(24px)',
+          transition: 'opacity 0.7s ease, transform 0.7s ease',
+        }}>
+          {/* Left */}
+          <div>
+            {/* Badge */}
             <div style={{
-              textAlign: 'center', paddingTop: 4,
-              opacity: heroVis ? 1 : 0,
-              transition: 'opacity 0.5s ease 0.6s',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: '#FEF3C7', border: '1px solid #FDE68A',
+              borderRadius: 100, padding: '5px 14px', marginBottom: 28,
             }}>
-              <span style={{ fontSize: 12, color: C.muted }}>
-                <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#10B981', marginRight: 6, verticalAlign: 'middle' }} />
-                47 more projects open right now
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.amber, display: 'inline-block', boxShadow: '0 0 0 3px rgba(217,119,6,0.2)' }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#92400E', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                India's Professional Freelance Network
               </span>
+            </div>
+
+            <h1 style={{
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontSize: 'clamp(34px, 4.2vw, 58px)',
+              fontWeight: 700,
+              lineHeight: 1.08,
+              letterSpacing: '-0.03em',
+              color: C.text,
+              marginBottom: 22,
+            }}>
+              Hire skilled<br />
+              freelancers.<br />
+              <span style={{ color: C.subtle, fontWeight: 400 }}>Get paid for great work.</span>
+            </h1>
+
+            <p style={{ fontSize: 17, color: C.muted, lineHeight: 1.7, marginBottom: 36, maxWidth: 440 }}>
+              Operalyn connects Indian businesses with independent professionals — developers, designers, marketers, and more. Pay milestone by milestone, in INR.
+            </p>
+
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 40 }}>
+              <Link to="/auth/register"
+                style={btnPrimary}
+                onMouseEnter={e => { e.currentTarget.style.background = C.accentHover; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(51,65,85,0.25)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)' }}
+              >
+                Post a project — free
+              </Link>
+              <Link to="/auth/register"
+                style={btnOutline}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = C.borderDark; e.currentTarget.style.background = C.ground2 }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.ground }}
+              >
+                Browse projects
+              </Link>
+            </div>
+
+            {/* Quick stats */}
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+              {[
+                ['₹0', 'to post a project'],
+                [`${commissionRate}%`, 'commission on success only'],
+                ['INR', 'payouts via Razorpay'],
+              ].map(([val, label]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                  <span style={{ fontFamily: 'Georgia, serif', fontSize: 17, fontWeight: 700, color: C.amber }}>{val}</span>
+                  <span style={{ fontSize: 12, color: C.subtle }}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right — project cards */}
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              position: 'absolute', inset: '-20px',
+              background: 'radial-gradient(ellipse at 60% 40%, rgba(219,234,254,0.35) 0%, transparent 70%)',
+              pointerEvents: 'none',
+            }} />
+
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {HERO_PROJECTS.map((p, i) => (
+                <div key={p.title} style={{
+                  background: '#fff',
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 14,
+                  padding: '16px 18px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  borderLeft: `3px solid ${p.color}`,
+                  opacity:   heroVis ? 1 : 0,
+                  transform: heroVis ? 'none' : 'translateX(24px)',
+                  transition: `opacity 0.55s ease ${0.2 + i * 0.12}s, transform 0.55s ease ${0.2 + i * 0.12}s`,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: C.text, lineHeight: 1.4, flex: 1 }}>{p.title}</p>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+                      background: p.catBg, color: p.catText,
+                      borderRadius: 6, padding: '2px 8px',
+                    }}>{p.category}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                      {p.skills.map(s => (
+                        <span key={s} style={{
+                          fontSize: 11, padding: '2px 8px',
+                          background: C.ground2, color: C.muted,
+                          borderRadius: 4, fontWeight: 500,
+                          border: `1px solid ${C.border}`,
+                        }}>{s}</span>
+                      ))}
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p.budget}</p>
+                      <p style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
+                        <span style={{ color: p.color, fontWeight: 600 }}>{p.bids} proposals</span> · {p.age}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Live indicator */}
+              <div style={{
+                textAlign: 'center', paddingTop: 4,
+                opacity: heroVis ? 1 : 0,
+                transition: 'opacity 0.5s ease 0.65s',
+              }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  fontSize: 12, color: C.muted,
+                  background: '#F0FDF4', border: '1px solid #BBF7D0',
+                  borderRadius: 100, padding: '4px 12px',
+                }}>
+                  <span style={{
+                    width: 7, height: 7, borderRadius: '50%', background: '#22C55E',
+                    boxShadow: '0 0 0 3px rgba(34,197,94,0.2)',
+                    display: 'inline-block',
+                  }} />
+                  47 more projects open right now
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── DIVIDER ────────────────────────────────────────── */}
-      <div style={{ borderTop: `1px solid ${C.border}` }} />
+      {/* ── STATS BAR ────────────────────────────────────── */}
+      <section ref={statsRef} style={{ borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, background: C.ground2 }}>
+        <div style={{
+          maxWidth: 1000, margin: '0 auto',
+          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+          opacity: statsVis ? 1 : 0, transform: statsVis ? 'none' : 'translateY(12px)',
+          transition: 'opacity 0.5s ease, transform 0.5s ease',
+        }}>
+          {STATS.map((s, i) => (
+            <div key={s.label} style={{
+              padding: '24px 32px',
+              borderRight: i < STATS.length - 1 ? `1px solid ${C.border}` : 'none',
+              textAlign: 'center',
+            }}>
+              <p style={{ fontFamily: 'Georgia, serif', fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 4, letterSpacing: '-0.02em' }}>{s.value}</p>
+              <p style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* ── HOW IT WORKS ─────────────────────────────────── */}
-      <section ref={stepsRef} style={{ background: C.ground2, padding: '80px 24px' }}>
+      <section ref={stepsRef} style={{ padding: '88px 24px', background: C.ground }}>
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-          <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.amber, marginBottom: 12 }}>
-            The process
-          </p>
-          <h2 style={{
-            fontFamily: 'Georgia, serif', fontSize: 'clamp(28px, 3vw, 40px)',
-            fontWeight: 700, letterSpacing: '-0.02em', color: C.text,
-            marginBottom: 56, lineHeight: 1.15,
-          }}>
-            From posting to payment<br />in three steps.
-          </h2>
+          <div style={{ marginBottom: 56 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.amber, marginBottom: 10 }}>
+              The process
+            </p>
+            <h2 style={{
+              fontFamily: 'Georgia, serif', fontSize: 'clamp(28px, 3vw, 40px)',
+              fontWeight: 700, letterSpacing: '-0.025em', color: C.text,
+              lineHeight: 1.15,
+            }}>
+              From posting to payment<br />in three steps.
+            </h2>
+          </div>
 
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 2,
+            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0,
             opacity: stepsVis ? 1 : 0, transform: stepsVis ? 'none' : 'translateY(16px)',
             transition: 'opacity 0.5s ease, transform 0.5s ease',
           }}>
@@ -349,30 +493,51 @@ export default function Landing() {
               <div key={s.n} style={{
                 background: '#fff',
                 border: `1px solid ${C.border}`,
-                borderRadius: i === 0 ? '12px 0 0 12px' : i === STEPS.length - 1 ? '0 12px 12px 0' : '0',
-                padding: '32px 28px',
+                borderRight: i < STEPS.length - 1 ? 'none' : `1px solid ${C.border}`,
+                borderRadius: i === 0 ? '14px 0 0 14px' : i === STEPS.length - 1 ? '0 14px 14px 0' : '0',
+                padding: '36px 28px',
                 position: 'relative',
+                ...staggerSteps[i],
               }}>
+                {/* Step number */}
                 <div style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 36, height: 36, borderRadius: '50%',
-                  background: C.accent, color: '#fff',
-                  fontFamily: 'Georgia, serif', fontSize: 16, fontWeight: 700,
+                  width: 40, height: 40, borderRadius: '50%',
+                  background: `linear-gradient(135deg, ${C.accent} 0%, #475569 100%)`,
+                  color: '#fff',
+                  fontFamily: 'Georgia, serif', fontSize: 17, fontWeight: 700,
                   marginBottom: 20,
+                  boxShadow: '0 2px 8px rgba(51,65,85,0.25)',
                 }}>
                   {s.n}
                 </div>
+
                 <h3 style={{ fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 10, lineHeight: 1.3 }}>{s.title}</h3>
-                <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.65 }}>{s.body}</p>
+                <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7 }}>{s.body}</p>
+
                 {s.cta && (
                   <Link to={s.to} style={{
-                    display: 'inline-block', marginTop: 20,
-                    fontSize: 13, fontWeight: 600, color: C.accent,
-                    textDecoration: 'none', borderBottom: `1.5px solid ${C.accent}`,
-                    paddingBottom: 1,
-                  }}>
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    marginTop: 20, fontSize: 13, fontWeight: 600, color: C.accent,
+                    textDecoration: 'none',
+                    transition: 'gap 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.gap = '8px' }}
+                  onMouseLeave={e => { e.currentTarget.style.gap = '4px' }}
+                  >
                     {s.cta} →
                   </Link>
+                )}
+
+                {/* Connector arrow between steps */}
+                {i < STEPS.length - 1 && (
+                  <div style={{
+                    position: 'absolute', right: -12, top: '50%', transform: 'translateY(-50%)',
+                    width: 24, height: 24, background: '#fff',
+                    border: `1px solid ${C.border}`, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 10, color: C.subtle, zIndex: 1,
+                  }}>→</div>
                 )}
               </div>
             ))}
@@ -381,38 +546,38 @@ export default function Landing() {
       </section>
 
       {/* ── CATEGORIES ───────────────────────────────────── */}
-      <section ref={catRef} style={{ padding: '80px 24px', background: C.ground }}>
+      <section ref={catRef} style={{ padding: '72px 24px', background: C.ground2 }}>
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-          <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.muted, marginBottom: 28, textAlign: 'center' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.muted, marginBottom: 32, textAlign: 'center' }}>
             Browse by category
           </p>
           <div style={{
             display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center',
-            opacity: catVis ? 1 : 0, transform: catVis ? 'none' : 'translateY(12px)',
-            transition: 'opacity 0.5s ease, transform 0.5s ease',
           }}>
-            {CATEGORIES.map((c) => (
+            {CATEGORIES.map((c, i) => (
               <Link key={c.name} to="/auth/register" style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '10px 18px',
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '10px 20px',
                 background: '#fff', border: `1.5px solid ${C.border}`,
                 borderRadius: 100, fontSize: 14, fontWeight: 500, color: C.text,
                 textDecoration: 'none',
-                transition: 'border-color 0.15s, transform 0.15s, box-shadow 0.15s',
                 boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                opacity: catVis ? 1 : 0,
+                transform: catVis ? 'none' : 'scale(0.95)',
+                transition: `opacity 0.4s ease ${0.05 + i * 0.05}s, transform 0.4s ease ${0.05 + i * 0.05}s, border-color 0.15s, box-shadow 0.15s`,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.borderColor = C.accent
-                e.currentTarget.style.transform = 'translateY(-1px)'
-                e.currentTarget.style.boxShadow = '0 3px 8px rgba(51,65,85,0.12)'
+                e.currentTarget.style.borderColor = c.color
+                e.currentTarget.style.boxShadow = `0 3px 12px ${c.color}25`
+                e.currentTarget.style.color = c.color
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.borderColor = C.border
-                e.currentTarget.style.transform = 'none'
                 e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.04)'
+                e.currentTarget.style.color = C.text
               }}
               >
-                <span style={{ fontSize: 16 }}>{c.icon}</span>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.color, display: 'inline-block', flexShrink: 0 }} />
                 {c.name}
               </Link>
             ))}
@@ -421,38 +586,101 @@ export default function Landing() {
       </section>
 
       {/* ── FEATURES ─────────────────────────────────────── */}
-      <section ref={featRef} style={{ background: C.ground2, padding: '80px 24px' }}>
+      <section ref={featRef} style={{ padding: '88px 24px', background: C.ground }}>
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-          <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.amber, marginBottom: 12 }}>
-            Why Operalyn
-          </p>
-          <h2 style={{
-            fontFamily: 'Georgia, serif', fontSize: 'clamp(26px, 3vw, 38px)',
-            fontWeight: 700, letterSpacing: '-0.02em', color: C.text,
-            marginBottom: 48, lineHeight: 1.2, maxWidth: 480,
-          }}>
-            Built for how professional work actually happens.
-          </h2>
+          <div style={{ marginBottom: 52 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.amber, marginBottom: 10 }}>
+              Why Operalyn
+            </p>
+            <h2 style={{
+              fontFamily: 'Georgia, serif', fontSize: 'clamp(26px, 3vw, 38px)',
+              fontWeight: 700, letterSpacing: '-0.025em', color: C.text,
+              lineHeight: 1.2, maxWidth: 500,
+            }}>
+              Built for how professional work actually happens.
+            </h2>
+          </div>
 
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20,
-            opacity: featVis ? 1 : 0, transform: featVis ? 'none' : 'translateY(16px)',
-            transition: 'opacity 0.5s ease, transform 0.5s ease',
+            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18,
           }}>
-            {FEATURES.map((f) => (
+            {FEATURES.map((f, i) => (
               <div key={f.title} style={{
-                background: '#fff', border: `1px solid ${C.border}`,
-                borderRadius: 14, padding: '28px 24px',
-              }}>
+                background: '#fff',
+                border: `1px solid ${C.border}`,
+                borderRadius: 16, padding: '28px 24px',
+                opacity: featVis ? 1 : 0,
+                transform: featVis ? 'none' : 'translateY(16px)',
+                transition: `opacity 0.5s ease ${0.1 + i * 0.1}s, transform 0.5s ease ${0.1 + i * 0.1}s, box-shadow 0.2s`,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-3px)' }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = featVis ? 'none' : 'translateY(16px)' }}
+              >
                 <div style={{
-                  width: 44, height: 44, borderRadius: 10,
-                  background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 20, marginBottom: 16,
+                  width: 46, height: 46, borderRadius: 12,
+                  background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 20, marginBottom: 18,
                 }}>
                   {f.icon}
                 </div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 8 }}>{f.title}</h3>
-                <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.65 }}>{f.body}</p>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 8, lineHeight: 1.35 }}>{f.title}</h3>
+                <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7 }}>{f.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ─────────────────────────────────── */}
+      <section ref={testiRef} style={{ padding: '88px 24px', background: C.ground2 }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 52 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.muted, marginBottom: 10 }}>
+              What people say
+            </p>
+            <h2 style={{
+              fontFamily: 'Georgia, serif', fontSize: 'clamp(24px, 2.8vw, 36px)',
+              fontWeight: 700, letterSpacing: '-0.025em', color: C.text, lineHeight: 1.2,
+            }}>
+              Trusted by clients and freelancers alike.
+            </h2>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
+            {TESTIMONIALS.map((t, i) => (
+              <div key={t.name} style={{
+                background: '#fff',
+                border: `1px solid ${C.border}`,
+                borderRadius: 16, padding: '28px 24px',
+                opacity: testiVis ? 1 : 0,
+                transform: testiVis ? 'none' : 'translateY(16px)',
+                transition: `opacity 0.5s ease ${0.1 + i * 0.12}s, transform 0.5s ease ${0.1 + i * 0.12}s`,
+              }}>
+                {/* Stars */}
+                <div style={{ display: 'flex', gap: 2, marginBottom: 16 }}>
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <span key={j} style={{ color: '#F59E0B', fontSize: 14 }}>★</span>
+                  ))}
+                </div>
+
+                <p style={{ fontSize: 14, color: C.text, lineHeight: 1.7, marginBottom: 20, fontStyle: 'italic' }}>
+                  "{t.quote}"
+                </p>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%',
+                    background: t.bg, color: t.color,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12, fontWeight: 700, flexShrink: 0,
+                  }}>
+                    {t.initials}
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{t.name}</p>
+                    <p style={{ fontSize: 12, color: C.muted }}>{t.role}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -460,17 +688,15 @@ export default function Landing() {
       </section>
 
       {/* ── FOR FREELANCERS ──────────────────────────────── */}
-      <section ref={flRef} style={{
-        background: '#0F172A', padding: '88px 24px',
-      }}>
+      <section ref={flRef} style={{ background: '#0F172A', padding: '96px 24px' }}>
         <div style={{
           maxWidth: 1000, margin: '0 auto',
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center',
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 72, alignItems: 'center',
           opacity: flVis ? 1 : 0, transform: flVis ? 'none' : 'translateY(16px)',
           transition: 'opacity 0.5s ease, transform 0.5s ease',
         }}>
           <div>
-            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#34D399', marginBottom: 16 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#34D399', marginBottom: 16 }}>
               For freelancers
             </p>
             <h2 style={{
@@ -480,46 +706,50 @@ export default function Landing() {
               lineHeight: 1.15, marginBottom: 20,
             }}>
               Your skills have<br />a market.<br />
-              <span style={{ color: '#94A3B8', fontWeight: 400 }}>Find it here.</span>
+              <span style={{ color: '#475569', fontWeight: 400 }}>Find it here.</span>
             </h2>
-            <p style={{ fontSize: 16, color: '#94A3B8', lineHeight: 1.65, marginBottom: 32 }}>
+            <p style={{ fontSize: 16, color: '#94A3B8', lineHeight: 1.7, marginBottom: 36 }}>
               Browse projects, submit proposals, deliver work, and get paid — all on one platform. No bidding wars. Clear milestones. INR payouts.
             </p>
             <Link to="/auth/register" style={{
-              display: 'inline-block',
-              padding: '13px 28px', fontSize: 15, fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '13px 26px', fontSize: 15, fontWeight: 700,
               background: '#34D399', color: '#064E3B',
               textDecoration: 'none', borderRadius: 10,
-              transition: 'opacity 0.15s',
+              transition: 'opacity 0.15s, transform 0.15s',
+              boxShadow: '0 2px 8px rgba(52,211,153,0.3)',
             }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none' }}
             >
-              Create a freelancer profile
+              Create a freelancer profile →
             </Link>
           </div>
 
-          {/* Freelancer benefit list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
               ['Browse real projects', 'Filter by category, budget, and skill. Every listing has a budget range — no fishing expeditions.'],
               ['Milestone-based work', 'Agree on deliverables upfront. No ambiguous scope. Get paid per milestone, not when the client feels like it.'],
               ['Your profile is your portfolio', 'Showcase work samples, display verified reviews, and build a reputation that follows you across projects.'],
-            ].map(([title, body]) => (
+            ].map(([title, body], i) => (
               <div key={title} style={{
                 display: 'flex', gap: 14,
-                background: 'rgba(255,255,255,0.05)',
+                background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 10, padding: '18px 20px',
-              }}>
+                borderRadius: 12, padding: '20px 20px',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+              >
                 <div style={{
-                  width: 20, height: 20, borderRadius: '50%',
+                  width: 22, height: 22, borderRadius: '50%',
                   background: '#34D399', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 700, color: '#064E3B', shrink: 0, flexShrink: 0, marginTop: 1,
+                  fontSize: 11, fontWeight: 800, color: '#064E3B', flexShrink: 0, marginTop: 1,
                 }}>✓</div>
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: '#F1F5F9', marginBottom: 4 }}>{title}</p>
-                  <p style={{ fontSize: 13, color: '#94A3B8', lineHeight: 1.6 }}>{body}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: '#F1F5F9', marginBottom: 5 }}>{title}</p>
+                  <p style={{ fontSize: 13, color: '#94A3B8', lineHeight: 1.65 }}>{body}</p>
                 </div>
               </div>
             ))}
@@ -528,80 +758,116 @@ export default function Landing() {
       </section>
 
       {/* ── FINAL CTA ─────────────────────────────────────── */}
-      <section style={{ padding: '96px 24px', background: C.ground, textAlign: 'center' }}>
-        <div style={{ maxWidth: 540, margin: '0 auto' }}>
+      <section style={{ padding: '104px 24px', background: C.ground, textAlign: 'center' }}>
+        <div style={{ maxWidth: 560, margin: '0 auto' }}>
           <h2 style={{
             fontFamily: 'Georgia, serif',
-            fontSize: 'clamp(30px, 4vw, 46px)',
+            fontSize: 'clamp(30px, 4vw, 48px)',
             fontWeight: 700, letterSpacing: '-0.025em', color: C.text,
-            lineHeight: 1.15, marginBottom: 16,
+            lineHeight: 1.12, marginBottom: 16,
           }}>
             Ready to get started?
           </h2>
-          <p style={{ fontSize: 16, color: C.muted, lineHeight: 1.65, marginBottom: 40 }}>
+          <p style={{ fontSize: 16, color: C.muted, lineHeight: 1.7, marginBottom: 44 }}>
             No setup fee. No monthly subscription. You pay {commissionRate}% commission only when work is successfully completed.
           </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
-            <Link to="/auth/register" style={{
-              padding: '14px 32px', fontSize: 15, fontWeight: 700,
-              background: C.accent, color: '#fff',
-              textDecoration: 'none', borderRadius: 10,
-              transition: 'transform 0.15s, box-shadow 0.15s',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(51,65,85,0.25)' }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)' }}
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
+            <Link to="/auth/register"
+              style={{ ...btnPrimary, padding: '15px 36px', fontSize: 16 }}
+              onMouseEnter={e => { e.currentTarget.style.background = C.accentHover; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(51,65,85,0.25)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)' }}
             >
               Hire a freelancer
             </Link>
-            <Link to="/auth/register" style={{
-              padding: '14px 32px', fontSize: 15, fontWeight: 600,
-              border: `1.5px solid ${C.border}`, color: C.text, background: '#fff',
-              textDecoration: 'none', borderRadius: 10,
-              transition: 'border-color 0.15s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = '#94A3B8'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+            <Link to="/auth/register"
+              style={{ ...btnOutline, padding: '15px 36px', fontSize: 16 }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = C.borderDark; e.currentTarget.style.background = C.ground2 }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.ground }}
             >
               Find work
             </Link>
           </div>
-          <p style={{ fontSize: 13, color: '#94A3B8' }}>
-            Create an account in under 2 minutes.
-          </p>
+          <p style={{ fontSize: 13, color: C.subtle }}>Create an account in under 2 minutes. No credit card required.</p>
         </div>
       </section>
 
       {/* ── FOOTER ────────────────────────────────────────── */}
-      <footer style={{
-        borderTop: `1px solid ${C.border}`,
-        padding: '28px 24px',
-        background: '#F8FAFC',
-      }}>
-        <div style={{
-          maxWidth: 1000, margin: '0 auto',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexWrap: 'wrap', gap: 12,
-        }}>
-          <span style={{ fontFamily: 'Georgia, serif', fontSize: 16, fontWeight: 700, color: C.accent }}>Operalyn</span>
-          <p style={{ fontSize: 12, color: C.muted }}>
-            © {new Date().getFullYear()} Operalyn Freelance Network Services Pvt. Ltd.
-          </p>
-          <div style={{ display: 'flex', gap: 20 }}>
-            <Link to="/auth/register" style={{ fontSize: 13, color: C.muted, textDecoration: 'none' }}>Terms</Link>
-            <Link to="/auth/register" style={{ fontSize: 13, color: C.muted, textDecoration: 'none' }}>Privacy</Link>
-            <Link to="/auth/login"    style={{ fontSize: 13, color: C.muted, textDecoration: 'none' }}>Sign in</Link>
+      <footer style={{ borderTop: `1px solid ${C.border}`, background: C.ground2 }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 24px 28px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 40, alignItems: 'start', marginBottom: 32 }}>
+            {/* Brand */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: 7,
+                  background: `linear-gradient(135deg, ${C.accent} 0%, #475569 100%)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ color: '#fff', fontSize: 12, fontWeight: 800, fontFamily: 'Georgia, serif' }}>O</span>
+                </div>
+                <span style={{ fontSize: 16, fontWeight: 700, color: C.accent }}>Operalyn</span>
+              </div>
+              <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, maxWidth: 220 }}>
+                India's professional freelance network. Milestone-based. INR payouts.
+              </p>
+            </div>
+
+            {/* Links */}
+            {[
+              { heading: 'Platform', links: [['Post a project', '/auth/register'], ['Browse projects', '/auth/register'], ['How it works', '/auth/register']] },
+              { heading: 'Freelancers', links: [['Create profile', '/auth/register'], ['Browse projects', '/auth/register'], ['How to get paid', '/auth/register']] },
+              { heading: 'Legal', links: [['Terms of service', '/auth/register'], ['Privacy policy', '/auth/register'], ['Sign in', '/auth/login']] },
+            ].map(({ heading, links }) => (
+              <div key={heading}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 12, letterSpacing: '0.02em' }}>{heading}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {links.map(([label, to]) => (
+                    <Link key={label} to={to} style={{
+                      fontSize: 13, color: C.muted, textDecoration: 'none',
+                      transition: 'color 0.15s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = C.text}
+                    onMouseLeave={e => e.currentTarget.style.color = C.muted}
+                    >
+                      {label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20 }}>
+            <p style={{ fontSize: 12, color: C.subtle }}>
+              © {new Date().getFullYear()} Operalyn Freelance Network Services Pvt. Ltd. · India
+            </p>
           </div>
         </div>
       </footer>
 
-      {/* prefers-reduced-motion override */}
+      {/* ── Responsive overrides ──────────────────────────── */}
       <style>{`
         @media (prefers-reduced-motion: reduce) {
           * { transition: none !important; animation: none !important; }
         }
-        @media (max-width: 720px) {
-          section > div { grid-template-columns: 1fr !important; }
+        @media (max-width: 768px) {
+          section > div[style*="grid-template-columns: 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+          }
+          section > div[style*="grid-template-columns: repeat(3"] {
+            grid-template-columns: 1fr !important;
+          }
+          section > div[style*="grid-template-columns: repeat(4"] {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          footer > div[style*="grid-template-columns"] {
+            grid-template-columns: 1fr 1fr !important;
+          }
+        }
+        @media (max-width: 480px) {
+          footer > div[style*="grid-template-columns"] {
+            grid-template-columns: 1fr !important;
+          }
         }
       `}</style>
     </div>
