@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Users, ShieldCheck, Tag,
-  CreditCard, Star, BarChart2, ScrollText, Settings, LogOut, Menu,
+  CreditCard, Star, BarChart2, ScrollText, Settings, LogOut, Menu, ArrowUpRight,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
@@ -17,6 +17,7 @@ const NAV = [
   { to: '/admin/reviews',       label: 'Reviews',       Icon: Star },
   { to: '/admin/reports',       label: 'Reports',       Icon: BarChart2 },
   { to: '/admin/audit-logs',    label: 'Audit Logs',    Icon: ScrollText },
+  { to: '/admin/payouts',       label: 'Payouts',       Icon: ArrowUpRight },
   { to: '/admin/settings',      label: 'Settings',      Icon: Settings },
 ]
 

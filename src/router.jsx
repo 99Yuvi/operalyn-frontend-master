@@ -42,6 +42,7 @@ import AdminReviews        from '@/pages/admin/Reviews'
 import AdminAuditLogs      from '@/pages/admin/AuditLogs'
 import AdminReports        from '@/pages/admin/Reports'
 import AdminSettings       from '@/pages/admin/Settings'
+import AdminPayouts        from '@/pages/admin/Payouts'
 
 // Shared pages
 import ContractDetail          from '@/pages/shared/ContractDetail'
@@ -131,6 +132,7 @@ export const router = createBrowserRouter([
         { path: '/admin/audit-logs',    element: <AdminAuditLogs /> },
         { path: '/admin/reports',       element: <AdminReports /> },
         { path: '/admin/settings',      element: <AdminSettings /> },
+        { path: '/admin/payouts',       element: <AdminPayouts /> },
       ],
     }],
   },
