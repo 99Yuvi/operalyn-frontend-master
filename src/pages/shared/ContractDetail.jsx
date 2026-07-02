@@ -5,7 +5,76 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useContract, useAddMilestone, useDeleteMilestone, useDeliverMilestone, useApproveMilestone, useRequestRevision } from '@/hooks/useContracts'
 import { contractKeys } from '@/lib/queryKeys'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
-import { getDeliveryFileUrl, approveMilestone as apiApprove } from '@/api/contracts'
+import { approveMilestone as apiApprove } from '@/api/contracts'
+import api from '@/api/client'
+
+const PREVIEWABLE = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp']
+
+function getExt(filename) {
+  return (filename || '').split('.').pop().toLowerCase()
+}
+
+function FilePreviewModal({ file, onClose }) {
+  if (!file) return null
+  const isPreviewable = PREVIEWABLE.includes(getExt(file.name))
+  const isImage = ['png','jpg','jpeg','gif','webp'].includes(getExt(file.name))
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 50,
+      background: 'rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', padding: 20,
+    }} onClick={onClose}>
+      <div style={{
+        background: '#fff', borderRadius: 16, width: '100%', maxWidth: 900,
+        maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }} onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid #E2E8F0' }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>
+            📎 {file.name}
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <a href={file.url} download={file.name} style={{
+              fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 8,
+              border: '1px solid #E2E8F0', color: '#334155', textDecoration: 'none',
+            }}>
+              ⬇ Download
+            </a>
+            <button onClick={onClose} style={{
+              fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 8,
+              border: '1px solid #E2E8F0', background: 'none', cursor: 'pointer', color: '#64748B',
+            }}>
+              ✕ Close
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflow: 'auto', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
+          {isImage ? (
+            <img src={file.url} alt={file.name} style={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain' }} />
+          ) : isPreviewable ? (
+            <iframe src={file.url} style={{ width: '100%', height: '75vh', border: 'none' }} title={file.name} />
+          ) : (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <p style={{ fontSize: 36, marginBottom: 12 }}>📄</p>
+              <p style={{ fontSize: 15, color: '#334155', fontWeight: 600, marginBottom: 8 }}>{file.name}</p>
+              <p style={{ fontSize: 13, color: '#64748B', marginBottom: 20 }}>Preview not available for this file type.</p>
+              <a href={file.url} download={file.name} style={{
+                padding: '10px 24px', fontSize: 14, fontWeight: 600, borderRadius: 10,
+                background: '#334155', color: '#fff', textDecoration: 'none',
+              }}>
+                ⬇ Download file
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 /** Dynamically load Razorpay checkout.js */
 function loadRazorpay() {
@@ -51,6 +120,21 @@ export default function ContractDetail() {
   const requestRevision       = useRequestRevision(id)
 
   /* ── Local UI state ── */
+  const [previewFile, setPreviewFile]       = useState(null)  // { url, name }
+
+  const openFilePreview = async (deliveryId, fileId, filename) => {
+    try {
+      const blob = await api.get(`/deliveries/${deliveryId}/files/${fileId}`, { responseType: 'blob' })
+      const url  = URL.createObjectURL(new Blob([blob]))
+      setPreviewFile({ url, name: filename || 'file' })
+    } catch { /* silently ignore */ }
+  }
+
+  const closePreview = () => {
+    if (previewFile?.url) URL.revokeObjectURL(previewFile.url)
+    setPreviewFile(null)
+  }
+
   const [showAddForm, setShowAddForm]       = useState(false)
   const [deliveryForm, setDeliveryForm]     = useState(null)   // milestoneId | null
   const [revisionForm, setRevisionForm]     = useState(null)   // milestoneId | null
@@ -148,6 +232,7 @@ export default function ContractDetail() {
 
   return (
     <div className="max-w-3xl">
+      <FilePreviewModal file={previewFile} onClose={closePreview} />
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-5">
         <Link to={backPath} className="text-slate-400 hover:text-slate-600 text-sm">← Contracts</Link>
@@ -348,12 +433,11 @@ function MilestoneRow({
               {lastDel.files?.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {lastDel.files.map(f => (
-                    <a key={f.id}
-                      href={getDeliveryFileUrl(lastDel.id, f.id)}
-                      target="_blank" rel="noreferrer"
-                      className="text-xs text-blue-600 hover:underline bg-blue-50 px-2 py-0.5 rounded">
+                    <button key={f.id}
+                      onClick={() => openFilePreview(lastDel.id, f.id, f.original_name)}
+                      className="text-xs text-blue-600 hover:underline bg-blue-50 px-2 py-0.5 rounded cursor-pointer">
                       📎 {f.original_name}
-                    </a>
+                    </button>
                   ))}
                 </div>
               )}

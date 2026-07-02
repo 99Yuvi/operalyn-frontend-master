@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getPayments, getInvoiceUrl } from '@/api/payments'
+import { getPayments } from '@/api/payments'
+import api from '@/api/client'
 import { getMyPayouts, requestPayout } from '@/api/payouts'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { paymentKeys } from '@/lib/queryKeys'
@@ -20,6 +21,21 @@ const PAYOUT_STATUS = {
 export default function FreelancerEarnings() {
   const { profile, user }  = useAuth()
   const qc                 = useQueryClient()
+
+  const [invoicePreview, setInvoicePreview] = useState(null) // { url, name }
+
+  const openInvoice = async (paymentId) => {
+    try {
+      const blob = await api.get(`/payments/${paymentId}/invoice`, { responseType: 'blob' })
+      const url  = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }))
+      setInvoicePreview({ url, name: `Invoice-${paymentId}.pdf` })
+    } catch { /* silently ignore */ }
+  }
+
+  const closeInvoice = () => {
+    if (invoicePreview?.url) URL.revokeObjectURL(invoicePreview.url)
+    setInvoicePreview(null)
+  }
 
   const [showPayoutForm, setShowPayoutForm] = useState(false)
   const [payoutMethod, setPayoutMethod]     = useState('bank') // 'bank' | 'upi'
@@ -104,6 +120,24 @@ export default function FreelancerEarnings() {
 
   return (
     <div className="space-y-6">
+
+      {/* Invoice Preview Modal */}
+      {invoicePreview && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={closeInvoice}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 900, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid #E2E8F0' }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>📄 {invoicePreview.name}</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <a href={invoicePreview.url} download={invoicePreview.name} style={{ fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 8, border: '1px solid #E2E8F0', color: '#334155', textDecoration: 'none' }}>⬇ Download</a>
+                <button onClick={closeInvoice} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, border: '1px solid #E2E8F0', background: 'none', cursor: 'pointer', color: '#64748B' }}>✕ Close</button>
+              </div>
+            </div>
+            <iframe src={invoicePreview.url} style={{ flex: 1, border: 'none', minHeight: 500 }} title="Invoice" />
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -349,10 +383,12 @@ export default function FreelancerEarnings() {
                   <p className="text-xs text-slate-400 sm:hidden mt-0.5">{formatDate(p.captured_at)}</p>
                 </div>
                 {p.invoice_path && (
-                  <a href={getInvoiceUrl(p.id)} target="_blank" rel="noreferrer"
-                    className="shrink-0 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 hover:underline">
+                  <button
+                    onClick={() => openInvoice(p.id)}
+                    className="shrink-0 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 hover:underline"
+                  >
                     <FileText className="h-3.5 w-3.5" />PDF
-                  </a>
+                  </button>
                 )}
               </div>
             ))}
