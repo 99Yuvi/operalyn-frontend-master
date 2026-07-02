@@ -121,8 +121,10 @@ export default function ContractDetail() {
         name:        'Operalyn',
         description: milestoneTitle,
         handler: () => {
-          // Payment success — webhook handles DB update; just refresh UI
-          setTimeout(() => approve.mutate(milestoneId), 2000)
+          // Payment captured — webhook will update DB; just refresh UI after delay
+          setTimeout(() => {
+            qc.invalidateQueries({ queryKey: contractKeys.detail(id) })
+          }, 2500)
         },
         modal: {
           ondismiss: () => setApiError('Payment cancelled.'),
@@ -412,7 +414,7 @@ function MilestoneRow({
                 )}
               </div>
               <div className="flex gap-2">
-                <button type="button" onClick={() => { setDelivNote(''); setDelivFiles([]) }}
+                <button type="button" onClick={() => { setDeliveryForm(null); setDelivNote(''); setDelivFiles([]) }}
                   className="px-3 py-1.5 text-xs text-slate-500 border border-slate-300 rounded-lg hover:bg-white">Cancel</button>
                 <button onClick={() => handleDeliver(m.id)}
                   disabled={delivering || delivNote.trim().length < 20}
@@ -431,7 +433,7 @@ function MilestoneRow({
                 rows={3} placeholder="Describe the changes needed (min 10 chars)…"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-400" />
               <div className="flex gap-2">
-                <button type="button" onClick={() => setRevNotes('')}
+                <button type="button" onClick={() => { setRevisionForm(null); setRevNotes('') }}
                   className="px-3 py-1.5 text-xs text-slate-500 border border-slate-300 rounded-lg hover:bg-white">Cancel</button>
                 <button onClick={() => handleRevision(m.id)}
                   disabled={revisioning || revNotes.trim().length < 10}

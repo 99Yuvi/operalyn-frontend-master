@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { getMe, logout as apiLogout, getSocketToken } from '@/api/auth'
 import { initCsrf } from '@/api/client'
+import { disconnectSocket } from '@/lib/socket'
 
 const AuthContext = createContext(null)
 
@@ -27,9 +28,14 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const login = (userData, profileData) => {
+  const login = async (userData, profileData) => {
     setUser(userData)
     setProfile(profileData ?? null)
+    // Fetch socket token immediately after login so chat works
+    try {
+      const r = await getSocketToken()
+      setSocketToken(r.token)
+    } catch {}
   }
 
   const logout = async () => {
@@ -37,6 +43,7 @@ export function AuthProvider({ children }) {
       await initCsrf()
       await apiLogout()
     } catch {}
+    disconnectSocket()   // disconnect socket on logout to prevent token leak
     setSocketToken(null)
     setUser(null)
     setProfile(null)

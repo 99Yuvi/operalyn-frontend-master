@@ -21,8 +21,8 @@ export default function NewProject() {
   })
 
   useEffect(() => {
-    getCategories().then(r => setCats(r.data ?? []))
-    getSkills().then(r => setSkills(r.data ?? []))
+    getCategories().then(r => setCats(r.data ?? [])).catch(() => {})
+    getSkills().then(r => setSkills(r.data ?? [])).catch(() => {})
   }, [])
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })) }
@@ -37,6 +37,11 @@ export default function NewProject() {
 
   const handleSubmit = async (statusOverride) => {
     setErrors({})
+    // Validate budget range
+    if (form.budget_min && form.budget_max && Number(form.budget_min) > Number(form.budget_max)) {
+      setErrors({ budget_min: 'Minimum budget cannot exceed maximum budget.' })
+      return
+    }
     try {
       await createProjectMut.mutateAsync({
         ...form,
