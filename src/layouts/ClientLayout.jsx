@@ -7,6 +7,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import NotificationBell from '@/components/shared/NotificationBell'
+import ChatNotifications, { useUnseenMessages } from '@/components/shared/ChatNotifications'
 
 const NAV = [
   { to: '/client',             label: 'Dashboard',   Icon: LayoutDashboard, end: true },
@@ -28,6 +29,7 @@ export default function ClientLayout() {
   const isChatPage        = location.pathname.startsWith('/client/chat')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const closeSidebar = () => setSidebarOpen(false)
+  const unseenMessages = useUnseenMessages()
 
   const currentNav = NAV.find(n =>
     n.end ? location.pathname === n.to : location.pathname.startsWith(n.to)
@@ -36,6 +38,9 @@ export default function ClientLayout() {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
+
+      {/* Global chat notifications — toasts, sound, desktop notifications */}
+      <ChatNotifications />
 
       {/* Mobile backdrop */}
       {sidebarOpen && (
@@ -74,6 +79,11 @@ export default function ClientLayout() {
                 <>
                   <Icon className={cn('h-5 w-5 shrink-0', isActive ? 'text-slate-700' : 'text-slate-400')} />
                   {label}
+                  {label === 'Messages' && unseenMessages > 0 && (
+                    <span className="ml-auto h-5 min-w-[20px] px-1.5 rounded-full bg-green-500 text-white text-[11px] font-bold flex items-center justify-center">
+                      {unseenMessages > 99 ? '99+' : unseenMessages}
+                    </span>
+                  )}
                 </>
               )}
             </NavLink>

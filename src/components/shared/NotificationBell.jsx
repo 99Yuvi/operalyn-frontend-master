@@ -10,10 +10,14 @@ function label(n) {
 
 function notifIcon(n) {
   const type = n.data?.type ?? ''
-  if (type.includes('proposal'))  return { bg: 'bg-blue-50',   text: 'text-blue-600',   icon: '📤' }
-  if (type.includes('contract'))  return { bg: 'bg-green-50',  text: 'text-green-600',  icon: '🤝' }
-  if (type.includes('payment'))   return { bg: 'bg-amber-50',  text: 'text-amber-600',  icon: '💰' }
-  if (type.includes('message'))   return { bg: 'bg-purple-50', text: 'text-purple-600', icon: '💬' }
+  if (type.includes('proposal'))     return { bg: 'bg-blue-50',   text: 'text-blue-600',   icon: '📤' }
+  if (type.includes('contract'))     return { bg: 'bg-green-50',  text: 'text-green-600',  icon: '🤝' }
+  if (type.includes('payment_failed')) return { bg: 'bg-red-50',  text: 'text-red-600',    icon: '⚠️' }
+  if (type.includes('payment'))      return { bg: 'bg-amber-50',  text: 'text-amber-600',  icon: '💰' }
+  if (type.includes('payout'))       return { bg: 'bg-teal-50',   text: 'text-teal-600',   icon: '💸' }
+  if (type.includes('verification')) return { bg: 'bg-indigo-50', text: 'text-indigo-600', icon: '🪪' }
+  if (type.includes('user'))         return { bg: 'bg-rose-50',   text: 'text-rose-600',   icon: '👤' }
+  if (type.includes('message'))      return { bg: 'bg-purple-50', text: 'text-purple-600', icon: '💬' }
   return { bg: 'bg-slate-100', text: 'text-slate-500', icon: '🔔' }
 }
 
