@@ -10,10 +10,11 @@ export default function VerifyEmail() {
   const [searchParams]        = useSearchParams()
   const navigate              = useNavigate()
   const isVerified            = searchParams.get('verified') === '1'
+  const isAlready             = searchParams.get('already') === '1'
 
-  // If ?verified=1 → refresh auth and redirect to dashboard
+  // If ?verified=1 or ?already=1 → refresh auth and redirect to dashboard
   useEffect(() => {
-    if (!isVerified) return
+    if (!isVerified && !isAlready) return
     refreshMe()
       .then(() => {
         setTimeout(() => navigate('/'), 2000)
@@ -32,7 +33,7 @@ export default function VerifyEmail() {
   }
 
   // ── Verified success screen ──────────────────────────────
-  if (isVerified) {
+  if (isVerified || isAlready) {
     return (
       <div style={{
         minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -49,10 +50,12 @@ export default function VerifyEmail() {
             }}>✅</div>
           </div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#0F172A', marginBottom: 10, letterSpacing: '-0.02em' }}>
-            Email verified!
+            {isAlready ? 'Already verified!' : 'Email verified!'}
           </h1>
           <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.7, marginBottom: 28 }}>
-            Your account is now active. Redirecting to dashboard…
+            {isAlready
+              ? 'Your email was already verified. Redirecting to dashboard…'
+              : 'Your account is now active. Redirecting to dashboard…'}
           </p>
           <Link to="/auth/login" style={{
             display: 'inline-block', padding: '11px 28px', fontSize: 14, fontWeight: 700,
