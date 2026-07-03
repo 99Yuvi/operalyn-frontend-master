@@ -1,12 +1,25 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { resendVerification } from '@/api/auth'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function VerifyEmail() {
-  const { user, logout }  = useAuth()
+  const { user, logout, refreshMe } = useAuth()
   const [sent, setSent]       = useState(false)
   const [loading, setLoading] = useState(false)
+  const [searchParams]        = useSearchParams()
+  const navigate              = useNavigate()
+  const isVerified            = searchParams.get('verified') === '1'
+
+  // If ?verified=1 → refresh auth and redirect to dashboard
+  useEffect(() => {
+    if (!isVerified) return
+    refreshMe()
+      .then(() => {
+        setTimeout(() => navigate('/'), 2000)
+      })
+      .catch(() => {})
+  }, [isVerified])
 
   const handleResend = async () => {
     setLoading(true)
@@ -16,6 +29,40 @@ export default function VerifyEmail() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // ── Verified success screen ──────────────────────────────
+  if (isVerified) {
+    return (
+      <div style={{
+        minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#F8FAFC',
+        fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
+        padding: 24,
+      }}>
+        <div style={{ width: '100%', maxWidth: 420, textAlign: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+            <div style={{
+              width: 76, height: 76, borderRadius: '50%',
+              background: '#F0FDF4', border: '2px solid #BBF7D0',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34,
+            }}>✅</div>
+          </div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#0F172A', marginBottom: 10, letterSpacing: '-0.02em' }}>
+            Email verified!
+          </h1>
+          <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.7, marginBottom: 28 }}>
+            Your account is now active. Redirecting to dashboard…
+          </p>
+          <Link to="/auth/login" style={{
+            display: 'inline-block', padding: '11px 28px', fontSize: 14, fontWeight: 700,
+            background: '#334155', color: '#fff', textDecoration: 'none', borderRadius: 10,
+          }}>
+            Go to dashboard →
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -48,7 +95,9 @@ export default function VerifyEmail() {
             Verify your email
           </h1>
           <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.7, margin: 0 }}>
-            We sent a verification link to
+            {user?.email
+              ? <>We sent a verification link to</>
+              : <>A verification link has been sent to your email address.</>}
           </p>
           {user?.email && (
             <p style={{
