@@ -16,9 +16,9 @@ export function getSocket(token) {
   socket = io(CHAT_URL, {
     autoConnect:  true,
     reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionAttempts: 10,
-    transports:   ['websocket', 'polling'],
+    reconnectionDelay: 2000,
+    reconnectionAttempts: Infinity,
+    transports:   ['polling', 'websocket'],  // polling first — works through Hostinger proxy
     auth:         { token },
   })
 

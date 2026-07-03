@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
         setProfile(data.profile)
         // Fetch a Sanctum token for Socket.io auth
         getSocketToken()
-          .then(r => setSocketToken(r.token))
+          .then(r => setSocketToken(r.data.token))
           .catch(() => {})
       })
       .catch(() => {
@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
     // Fetch socket token immediately after login so chat works
     try {
       const r = await getSocketToken()
-      setSocketToken(r.token)
+      setSocketToken(r.data.token)
     } catch {}
   }
 
