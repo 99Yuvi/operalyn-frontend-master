@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // In development: VITE_API_URL is unset → relative URLs go through Vite proxy
 // In production: VITE_API_URL=https://api.operalyn.com → absolute URLs
-const API_ORIGIN = import.meta.env.VITE_API_URL ?? ''
+export const API_ORIGIN = import.meta.env.VITE_API_URL ?? ''
 
 const api = axios.create({
   baseURL: `${API_ORIGIN}/api/v1`,

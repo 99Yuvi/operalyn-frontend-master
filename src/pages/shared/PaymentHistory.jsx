@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useQuery } from '@tanstack/react-query'
-import { getPayments, getInvoiceUrl } from '@/api/payments'
+import { getPayments } from '@/api/payments'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { paymentKeys } from '@/lib/queryKeys'
+import { API_ORIGIN } from '@/api/client'
 
 const STATUS = {
   captured: 'bg-green-50 text-green-700',
@@ -14,6 +16,7 @@ const STATUS = {
 export default function PaymentHistory() {
   const { user }  = useAuth()
   const isClient  = user?.role === 'client'
+  const [invoicePreview, setInvoicePreview] = useState(null)
 
   const { data, isLoading } = useQuery({
     queryKey: paymentKeys.list({}),
@@ -22,8 +25,43 @@ export default function PaymentHistory() {
 
   const payments = data?.data ?? []
 
+  const openInvoice = async (paymentId) => {
+    try {
+      const res = await fetch(`${API_ORIGIN}/api/v1/payments/${paymentId}/invoice`, {
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('Failed')
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }))
+      setInvoicePreview({ url, name: `Invoice-${paymentId}.pdf` })
+    } catch { /* silently ignore */ }
+  }
+
+  const closeInvoice = () => {
+    if (invoicePreview?.url) URL.revokeObjectURL(invoicePreview.url)
+    setInvoicePreview(null)
+  }
+
   return (
     <div>
+      {/* Invoice popup */}
+      {invoicePreview && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={closeInvoice}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 900, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid #E2E8F0' }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>📄 {invoicePreview.name}</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <a href={invoicePreview.url} download={invoicePreview.name} style={{ fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 8, border: '1px solid #E2E8F0', color: '#334155', textDecoration: 'none' }}>⬇ Download</a>
+                <button onClick={closeInvoice} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, border: '1px solid #E2E8F0', background: 'none', cursor: 'pointer', color: '#64748B' }}>✕ Close</button>
+              </div>
+            </div>
+            <iframe src={invoicePreview.url} style={{ flex: 1, border: 'none', minHeight: 500 }} title="Invoice" />
+          </div>
+        </div>
+      )}
+
       <h2 className="text-xl font-bold text-slate-800 mb-1" style={{ fontFamily: 'Georgia, serif' }}>
         Payment History
       </h2>
@@ -84,14 +122,12 @@ export default function PaymentHistory() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       {p.status === 'captured' && p.invoice_path && (
-                        <a
-                          href={getInvoiceUrl(p.id)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-blue-600 hover:underline"
+                        <button
+                          onClick={() => openInvoice(p.id)}
+                          className="text-xs text-blue-600 hover:underline font-medium"
                         >
                           Invoice ↗
-                        </a>
+                        </button>
                       )}
                     </td>
                   </tr>

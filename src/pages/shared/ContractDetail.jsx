@@ -6,7 +6,7 @@ import { useContract, useAddMilestone, useDeleteMilestone, useDeliverMilestone, 
 import { contractKeys } from '@/lib/queryKeys'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { approveMilestone as apiApprove } from '@/api/contracts'
-import api from '@/api/client'
+import api, { API_ORIGIN } from '@/api/client'
 
 const PREVIEWABLE = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp']
 
@@ -16,8 +16,11 @@ function getExt(filename) {
 
 function FilePreviewModal({ file, onClose }) {
   if (!file) return null
-  const isPreviewable = PREVIEWABLE.includes(getExt(file.name))
-  const isImage = ['png','jpg','jpeg','gif','webp'].includes(getExt(file.name))
+  const ext = getExt(file.name)
+  const mimeType = file.type || ''
+  const isImage = mimeType.startsWith('image/') || ['png','jpg','jpeg','gif','webp'].includes(ext)
+  const isPdf   = mimeType.includes('pdf') || ext === 'pdf'
+  const isPreviewable = isImage || isPdf
 
   return (
     <div style={{
@@ -55,7 +58,7 @@ function FilePreviewModal({ file, onClose }) {
         <div style={{ flex: 1, overflow: 'auto', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
           {isImage ? (
             <img src={file.url} alt={file.name} style={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain' }} />
-          ) : isPreviewable ? (
+          ) : isPdf ? (
             <iframe src={file.url} style={{ width: '100%', height: '75vh', border: 'none' }} title={file.name} />
           ) : (
             <div style={{ textAlign: 'center', padding: 40 }}>
@@ -124,9 +127,14 @@ export default function ContractDetail() {
 
   const openFilePreview = async (deliveryId, fileId, filename) => {
     try {
-      const blob = await api.get(`/deliveries/${deliveryId}/files/${fileId}`, { responseType: 'blob' })
-      const url  = URL.createObjectURL(new Blob([blob]))
-      setPreviewFile({ url, name: filename || 'file' })
+      const res = await fetch(`${API_ORIGIN}/api/v1/deliveries/${deliveryId}/files/${fileId}`, {
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('Failed')
+      const contentType = res.headers.get('content-type') || 'application/octet-stream'
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(new Blob([blob], { type: contentType }))
+      setPreviewFile({ url, name: filename || 'file', type: contentType })
     } catch { /* silently ignore */ }
   }
 
@@ -324,6 +332,7 @@ export default function ContractDetail() {
                 onApprove={() => handleApprove(m.id, m.title)}
                 onRevision={() => { setRevisionForm(m.id); setRevNotes('') }}
                 onDelete={() => window.confirm('Remove this milestone?') && deleteMilestone.mutate(m.id)}
+                onFilePreview={openFilePreview}
                 deliveryForm={deliveryForm} revisionForm={revisionForm}
                 delivNote={delivNote} setDelivNote={setDelivNote}
                 delivFiles={delivFiles} setDelivFiles={setDelivFiles}
@@ -391,7 +400,7 @@ export default function ContractDetail() {
 /* ── Milestone row ── */
 function MilestoneRow({
   milestone: m, index, isClient, isFreelancer, contractActive,
-  onDeliver, onApprove, onRevision, onDelete,
+  onDeliver, onApprove, onRevision, onDelete, onFilePreview,
   deliveryForm, revisionForm,
   delivNote, setDelivNote, delivFiles, setDelivFiles,
   revNotes, setRevNotes,
@@ -434,7 +443,7 @@ function MilestoneRow({
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {lastDel.files.map(f => (
                     <button key={f.id}
-                      onClick={() => openFilePreview(lastDel.id, f.id, f.original_name)}
+                      onClick={() => onFilePreview(lastDel.id, f.id, f.original_name)}
                       className="text-xs text-blue-600 hover:underline bg-blue-50 px-2 py-0.5 rounded cursor-pointer">
                       📎 {f.original_name}
                     </button>

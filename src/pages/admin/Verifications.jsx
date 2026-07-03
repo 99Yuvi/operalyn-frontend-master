@@ -1,13 +1,33 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getVerifications, updateVerification, getDocUrl } from '@/api/admin'
+import { getVerifications, updateVerification } from '@/api/admin'
 import { formatDate, getInitials, getAvatarColor } from '@/lib/utils'
+import { API_ORIGIN } from '@/api/client'
 
 export default function AdminVerifications() {
   const qc = useQueryClient()
-  const [status, setStatus] = useState('pending')
-  const [modal, setModal]   = useState(null)
-  const [notes, setNotes]   = useState('')
+  const [status, setStatus]   = useState('pending')
+  const [modal, setModal]     = useState(null)
+  const [notes, setNotes]     = useState('')
+  const [docPreview, setDocPreview] = useState(null)
+
+  const openDoc = async (profileId, docId, label) => {
+    try {
+      const res = await fetch(`${API_ORIGIN}/api/v1/admin/verifications/${profileId}/documents/${docId}`, {
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('Failed')
+      const contentType = res.headers.get('content-type') || 'application/octet-stream'
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(new Blob([blob], { type: contentType }))
+      setDocPreview({ url, name: label, type: contentType })
+    } catch { /* silently ignore */ }
+  }
+
+  const closeDoc = () => {
+    if (docPreview?.url) URL.revokeObjectURL(docPreview.url)
+    setDocPreview(null)
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin','verifications', status],
@@ -22,6 +42,30 @@ export default function AdminVerifications() {
 
   return (
     <div>
+      {/* Document preview popup */}
+      {docPreview && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={closeDoc}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 800, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid #E2E8F0' }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>🪪 {docPreview.name}</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <a href={docPreview.url} download={docPreview.name} style={{ fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 8, border: '1px solid #E2E8F0', color: '#334155', textDecoration: 'none' }}>⬇ Download</a>
+                <button onClick={closeDoc} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, border: '1px solid #E2E8F0', background: 'none', cursor: 'pointer', color: '#64748B' }}>✕ Close</button>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
+              {docPreview.type?.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp)$/i.test(docPreview.name) ? (
+                <img src={docPreview.url} alt={docPreview.name} style={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain' }} />
+              ) : (
+                <iframe src={docPreview.url} style={{ width: '100%', height: '75vh', border: 'none' }} title={docPreview.name} />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <h2 className="text-xl font-bold text-slate-800 mb-4" style={{ fontFamily: 'Georgia, serif' }}>Freelancer Verifications</h2>
 
       <div className="flex gap-2 mb-4">
@@ -52,10 +96,11 @@ export default function AdminVerifications() {
                   {fp.documents?.length > 0 && (
                     <div className="flex gap-2 mt-1.5">
                       {fp.documents.map(doc => (
-                        <a key={doc.id} href={getDocUrl(fp.id, doc.id)} target="_blank" rel="noreferrer"
-                          className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded hover:underline">
+                        <button key={doc.id}
+                          onClick={() => openDoc(fp.id, doc.id, doc.doc_type.replace('_', ' '))}
+                          className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded hover:underline cursor-pointer">
                           {doc.doc_type.replace('_', ' ')} ↗
-                        </a>
+                        </button>
                       ))}
                     </div>
                   )}

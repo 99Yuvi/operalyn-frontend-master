@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getPayments } from '@/api/payments'
-import api from '@/api/client'
+import api, { API_ORIGIN } from '@/api/client'
 import { getMyPayouts, requestPayout } from '@/api/payouts'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { paymentKeys } from '@/lib/queryKeys'
@@ -26,14 +26,19 @@ export default function FreelancerEarnings() {
 
   const openInvoice = async (paymentId) => {
     try {
-      const blob = await api.get(`/payments/${paymentId}/invoice`, { responseType: 'blob' })
+      // Follow redirect → get the final signed storage URL
+      const res = await fetch(`${API_ORIGIN}/api/v1/payments/${paymentId}/invoice`, {
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('Failed')
+      const blob = await res.blob()
       const url  = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }))
       setInvoicePreview({ url, name: `Invoice-${paymentId}.pdf` })
     } catch { /* silently ignore */ }
   }
 
   const closeInvoice = () => {
-    if (invoicePreview?.url) URL.revokeObjectURL(invoicePreview.url)
+    if (invoicePreview?.url?.startsWith('blob:')) URL.revokeObjectURL(invoicePreview.url)
     setInvoicePreview(null)
   }
 
