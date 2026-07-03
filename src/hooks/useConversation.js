@@ -34,12 +34,17 @@ export function useConversation(conversationId, { onMessageConfirmed } = {}) {
     joinRoom()
 
     /* ── Incoming events ── */
+    // Cache shape is useInfiniteQuery's { pages: [{ data, meta }], pageParams }.
+    // pages[0] is the newest page — new messages are prepended there.
     const onNewMessage = (msg) => {
       qc.setQueryData(conversationKeys.messages(conversationId), (old) => {
-        if (!old) return { data: [msg], meta: {} }
-        // Avoid duplicates (our own optimistic message gets replaced by tempId)
-        const filtered = (old.data ?? []).filter(m => m.id !== msg.id && m.tempId !== msg.tempId)
-        return { ...old, data: [msg, ...filtered] }
+        if (!old?.pages) return { pages: [{ data: [msg], meta: {} }], pageParams: [null] }
+        const pages = old.pages.map((page, i) => {
+          // Avoid duplicates (our own optimistic message gets replaced by tempId)
+          const filtered = (page.data ?? []).filter(m => m.id !== msg.id && m.tempId !== msg.tempId)
+          return i === 0 ? { ...page, data: [msg, ...filtered] } : { ...page, data: filtered }
+        })
+        return { ...old, pages }
       })
       // Clear optimistic message immediately when confirmed
       if (msg.tempId) onConfirmedRef.current?.(msg.tempId)
@@ -59,12 +64,15 @@ export function useConversation(conversationId, { onMessageConfirmed } = {}) {
       // PATCH hasn't committed to DB yet by the time the refetch fires.
       const ts = readAt ?? new Date().toISOString()
       qc.setQueryData(conversationKeys.messages(conversationId), (old) => {
-        if (!old?.data) return old
+        if (!old?.pages) return old
         return {
           ...old,
-          data: old.data.map(m =>
-            m.sender_id === userId && !m.read_at ? { ...m, read_at: ts } : m
-          ),
+          pages: old.pages.map(page => ({
+            ...page,
+            data: (page.data ?? []).map(m =>
+              m.sender_id === userId && !m.read_at ? { ...m, read_at: ts } : m
+            ),
+          })),
         }
       })
     }
@@ -89,8 +97,10 @@ export function useConversation(conversationId, { onMessageConfirmed } = {}) {
     }
   }, [conversationId, token])
 
-  const sendMessage = useCallback((body, tempId) => {
-    socketRef.current?.emit('send_message', { conversationId, body, tempId })
+  const sendMessage = useCallback((body, tempId, fileData = null) => {
+    const payload = { conversationId, body, tempId }
+    if (fileData) Object.assign(payload, fileData)
+    socketRef.current?.emit('send_message', payload)
   }, [conversationId])
 
   const emitTypingStart = useCallback(() => {

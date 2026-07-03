@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
-import { getConversations, getConversation } from '@/api/conversations'
+import { getConversation } from '@/api/conversations'
+import { useConversationsList, makeListScrollHandler } from '@/hooks/useConversationsList'
 import { getContract } from '@/api/contracts'
 import { cn, getInitials, getAvatarColor, timeAgo, formatCurrency } from '@/lib/utils'
 import ChatView from './ChatView'
@@ -28,11 +29,10 @@ export default function ChatLayout() {
   const isClient = user?.role === 'client'
   const [search, setSearch] = useState('')
 
-  const { data: listData, isLoading: listLoading } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: getConversations,
-    refetchInterval: 30_000,
-  })
+  const { conversations, isLoading: listLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useConversationsList(search)
+
+  const onListScroll = makeListScrollHandler({ hasNextPage, isFetchingNextPage, fetchNextPage })
 
   const { data: convData } = useQuery({
     queryKey: ['conversation', conversationId],
@@ -49,15 +49,6 @@ export default function ChatLayout() {
   })
   const contract = contractData?.data
   const otherParty = conv ? (isClient ? conv.freelancer : conv.client) : null
-
-  const conversations = (listData?.data ?? []).filter(c => {
-    if (!search.trim()) return true
-    const other = isClient ? c.freelancer : c.client
-    return (
-      other?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      c.contract?.project?.title?.toLowerCase().includes(search.toLowerCase())
-    )
-  })
 
   return (
     <div className="flex h-full overflow-hidden bg-white">
@@ -91,7 +82,7 @@ export default function ChatLayout() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto" onScroll={onListScroll}>
           {listLoading ? (
             <SkeletonList />
           ) : conversations.length === 0 && !search ? (
@@ -101,18 +92,25 @@ export default function ChatLayout() {
               <p className="text-sm">No results for "{search}"</p>
             </div>
           ) : (
-            <ul>
-              {conversations.map((c, idx) => (
-                <ConvRow
-                  key={c.id}
-                  conv={c}
-                  isClient={isClient}
-                  user={user}
-                  isActive={String(c.id) === String(conversationId)}
-                  isLast={idx === conversations.length - 1}
-                />
-              ))}
-            </ul>
+            <>
+              <ul>
+                {conversations.map((c, idx) => (
+                  <ConvRow
+                    key={c.id}
+                    conv={c}
+                    isClient={isClient}
+                    user={user}
+                    isActive={String(c.id) === String(conversationId)}
+                    isLast={idx === conversations.length - 1}
+                  />
+                ))}
+              </ul>
+              {isFetchingNextPage && (
+                <div className="flex justify-center py-3">
+                  <p className="text-xs text-slate-400">Loading more…</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </aside>

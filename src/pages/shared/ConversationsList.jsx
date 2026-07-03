@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
-import { getConversations } from '@/api/conversations'
+import { useConversationsList, makeListScrollHandler } from '@/hooks/useConversationsList'
 import { getInitials, getAvatarColor, timeAgo, cn } from '@/lib/utils'
 
 export default function ConversationsList() {
@@ -10,18 +9,10 @@ export default function ConversationsList() {
   const isClient    = user?.role === 'client'
   const [search, setSearch] = useState('')
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['conversations'],
-    queryFn:  getConversations,
-    refetchInterval: 30_000, // refresh unread counts every 30s
-  })
+  const { conversations, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useConversationsList(search)
 
-  const conversations = (data?.data ?? []).filter(conv => {
-    if (!search.trim()) return true
-    const other = isClient ? conv.freelancer : conv.client
-    return other?.name?.toLowerCase().includes(search.toLowerCase()) ||
-           conv.contract?.project?.title?.toLowerCase().includes(search.toLowerCase())
-  })
+  const onListScroll = makeListScrollHandler({ hasNextPage, isFetchingNextPage, fetchNextPage })
 
   return (
     <div className="flex flex-col h-full max-h-[calc(100dvh-4rem)]">
@@ -50,7 +41,7 @@ export default function ConversationsList() {
       </div>
 
       {/* ── List ── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" onScroll={onListScroll}>
         {isLoading ? (
           <SkeletonList />
         ) : conversations.length === 0 && !search ? (
@@ -64,17 +55,24 @@ export default function ConversationsList() {
             <p className="text-sm">No results for "{search}"</p>
           </div>
         ) : (
-          <ul>
-            {conversations.map((conv, idx) => (
-              <ConversationRow
-                key={conv.id}
-                conv={conv}
-                isClient={isClient}
-                user={user}
-                isLast={idx === conversations.length - 1}
-              />
-            ))}
-          </ul>
+          <>
+            <ul>
+              {conversations.map((conv, idx) => (
+                <ConversationRow
+                  key={conv.id}
+                  conv={conv}
+                  isClient={isClient}
+                  user={user}
+                  isLast={idx === conversations.length - 1}
+                />
+              ))}
+            </ul>
+            {isFetchingNextPage && (
+              <div className="flex justify-center py-3">
+                <p className="text-xs text-slate-400">Loading more…</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

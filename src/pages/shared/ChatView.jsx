@@ -1,79 +1,178 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
 import { useConversation } from '@/hooks/useConversation'
-import { getConversation, getMessages, markConversationRead } from '@/api/conversations'
+import { getConversation, getMessages, markConversationRead, uploadChatFile } from '@/api/conversations'
 import { conversationKeys } from '@/lib/queryKeys'
 import { cn, getInitials, getAvatarColor, timeAgo } from '@/lib/utils'
+
+/* ── File attachment config ─────────────────────────────────────────────── */
+const ACCEPTED_EXTENSIONS = {
+  image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  video: ['video/mp4', 'video/webm', 'video/quicktime'],
+  file:  [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+    'application/zip',
+    'application/x-rar-compressed',
+  ],
+}
+
+const MAX_BYTES = { image: 6 * 1024 * 1024, video: 20 * 1024 * 1024, file: 25 * 1024 * 1024 }
+const MAX_LABEL = { image: '6 MB', video: '20 MB', file: '25 MB' }
+
+const ALL_ACCEPT = [...ACCEPTED_EXTENSIONS.image, ...ACCEPTED_EXTENSIONS.video, ...ACCEPTED_EXTENSIONS.file].join(',')
+
+function detectType(mimeType) {
+  if (ACCEPTED_EXTENSIONS.image.includes(mimeType)) return 'image'
+  if (ACCEPTED_EXTENSIONS.video.includes(mimeType)) return 'video'
+  return 'file'
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
 
 export default function ChatView() {
   const { conversationId }  = useParams()
   const { user }            = useAuth()
-  const scrollRef           = useRef(null)   // the scrollable messages container
+  const scrollRef           = useRef(null)
   const inputRef            = useRef(null)
+  const fileInputRef        = useRef(null)
   const isFirstScroll       = useRef(true)
+  const blobUrlsRef         = useRef(new Map())   // tempId → blobUrl for cleanup
 
-  const [input, setInput]   = useState('')
-  const [sending, setSending] = useState(false)
+  const [input, setInput]         = useState('')
+  const [sending, setSending]     = useState(false)
   const [pendingMsgs, setPending] = useState([])
+  const [filePreview, setFilePreview] = useState(null)   // { file, blobUrl, type, name, size }
+
+  const clearFilePreview = useCallback(() => {
+    if (filePreview?.blobUrl) URL.revokeObjectURL(filePreview.blobUrl)
+    setFilePreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }, [filePreview])
+
+  const revokeBlobUrl = useCallback((tempId) => {
+    if (blobUrlsRef.current.has(tempId)) {
+      URL.revokeObjectURL(blobUrlsRef.current.get(tempId))
+      blobUrlsRef.current.delete(tempId)
+    }
+  }, [])
 
   const { online, typing, sendMessage, emitTypingStart, emitTypingStop, emitMessagesRead } =
     useConversation(conversationId, {
       onMessageConfirmed: (tempId) => {
         setPending(prev => prev.filter(m => m.tempId !== tempId))
+        revokeBlobUrl(tempId)
         setSending(false)
       },
     })
 
-  // Fetch conversation meta
   const { data: convData } = useQuery({
     queryKey: ['conversation', conversationId],
     queryFn:  () => getConversation(conversationId),
     enabled:  !!conversationId,
   })
 
-  // Fetch message history (API returns newest-first; we reverse for display)
-  const { data: msgData, isLoading: loadingMsgs } = useQuery({
+  const {
+    data: msgData,
+    isLoading: loadingMsgs,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: conversationKeys.messages(conversationId),
-    queryFn:  () => getMessages(conversationId),
+    queryFn:  ({ pageParam }) => getMessages(conversationId, pageParam ? { cursor: pageParam } : undefined),
+    initialPageParam: null,
+    getNextPageParam: (last) => (last?.meta?.has_more ? last.meta.next_cursor : undefined),
     enabled:  !!conversationId,
     staleTime: 0,
   })
 
-  const conv     = convData?.data
-  // Reverse so oldest is at top, newest is at bottom — WhatsApp order
-  const messages = [...(msgData?.data ?? [])].reverse()
+  const conv = convData?.data
+  // pages[0] = newest 50 (desc), pages[1] = older 50, … — flatten then reverse → chronological
+  const messages = (msgData?.pages ?? []).flatMap(p => p.data ?? []).reverse()
 
-  // Mark as read when opened
+  // Mark as read when opened + reset scroll state for the new conversation
   useEffect(() => {
     if (conversationId) {
+      isFirstScroll.current = true
       markConversationRead(conversationId).catch(() => {})
       emitMessagesRead()
     }
   }, [conversationId])
 
-  // Scroll to bottom.
-  // On first load: instant jump (user should land on newest message).
-  // On new messages: smooth scroll only if already near the bottom.
+  /* ── Load older messages when the user scrolls near the top ── */
+  const prevScrollHeightRef = useRef(null)
+
+  const handleScroll = () => {
+    const el = scrollRef.current
+    if (!el || !hasNextPage || isFetchingNextPage || prevScrollHeightRef.current != null) return
+    if (el.scrollTop < 60) {
+      prevScrollHeightRef.current = el.scrollHeight
+      fetchNextPage()
+    }
+  }
+
+  // After older messages are prepended, keep the viewport anchored on the same message
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (el && prevScrollHeightRef.current != null && !isFetchingNextPage) {
+      el.scrollTop += el.scrollHeight - prevScrollHeightRef.current
+      prevScrollHeightRef.current = null
+    }
+  }, [isFetchingNextPage])
+
+  // Scroll behavior
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-
     if (isFirstScroll.current) {
-      // Jump instantly to bottom on initial load
+      if (messages.length === 0 && pendingMsgs.length === 0) return  // wait for content
       el.scrollTop = el.scrollHeight
       isFirstScroll.current = false
-    } else {
-      // Only auto-scroll if user is within 150px of the bottom
+    } else if (prevScrollHeightRef.current == null) {
+      // Skip auto-scroll while older messages are being prepended at the top
       const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
-      if (distFromBottom < 150) {
-        el.scrollTop = el.scrollHeight
-      }
+      if (distFromBottom < 150) el.scrollTop = el.scrollHeight
     }
   }, [messages.length, pendingMsgs.length, typing])
 
-  // Typing debounce
+  /* ── File selection ─────────────────────────────────────────────────── */
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const type    = detectType(file.type)
+    const maxSize = MAX_BYTES[type]
+
+    if (file.size > maxSize) {
+      const label = type === 'image' ? 'Images' : type === 'video' ? 'Videos' : 'Documents'
+      alert(`${label} must be under ${MAX_LABEL[type]}.\n\nSelected file: ${formatFileSize(file.size)}`)
+      e.target.value = ''
+      return
+    }
+
+    if (filePreview?.blobUrl) URL.revokeObjectURL(filePreview.blobUrl)
+    const blobUrl = URL.createObjectURL(file)
+    setFilePreview({ file, blobUrl, type, name: file.name, size: file.size })
+    e.target.value = ''
+  }
+
+  /* ── Typing debounce ────────────────────────────────────────────────── */
   const typingTimeout = useRef(null)
   const handleInputChange = (e) => {
     setInput(e.target.value)
@@ -82,30 +181,77 @@ export default function ChatView() {
     typingTimeout.current = setTimeout(emitTypingStop, 1500)
   }
 
-  const handleSend = useCallback(() => {
+  /* ── Send ────────────────────────────────────────────────────────────── */
+  const handleSend = useCallback(async () => {
+    if (sending) return
+
+    /* — File message — */
+    if (filePreview) {
+      const { file, blobUrl, type, name, size } = filePreview
+      const tempId = `temp_${Date.now()}`
+
+      // Optimistic message with blob URL for instant preview
+      blobUrlsRef.current.set(tempId, blobUrl)
+      setPending(prev => [...prev, {
+        tempId, body: null, type,
+        file_path: blobUrl,    // blob URL shown until server confirms
+        file_name: name,
+        file_size: size,
+        sender_id: user.id,
+        created_at: new Date().toISOString(),
+      }])
+      setFilePreview(null)   // clear preview bar (blobUrl now tracked in blobUrlsRef)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      setSending(true)
+
+      requestAnimationFrame(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      })
+
+      try {
+        const result = await uploadChatFile(conversationId, file)
+        // Upload done — send via socket so chat server persists + broadcasts
+        sendMessage(null, tempId, {
+          type:      result.type,
+          file_path: result.file_path,
+          file_name: result.file_name,
+          file_size: result.file_size,
+        })
+        // Fallback: remove optimistic if socket never confirms
+        setTimeout(() => {
+          setPending(prev => prev.filter(m => m.tempId !== tempId))
+          revokeBlobUrl(tempId)
+          setSending(false)
+        }, 15_000)
+      } catch {
+        setPending(prev => prev.filter(m => m.tempId !== tempId))
+        revokeBlobUrl(tempId)
+        setSending(false)
+        alert('Upload failed. Could not upload the file. Please try again.')
+      }
+      return
+    }
+
+    /* — Text message — */
     const body = input.trim()
-    if (!body || sending) return
+    if (!body) return
 
     const tempId = `temp_${Date.now()}`
-
     setPending(prev => [...prev, { tempId, body, sender_id: user.id, created_at: new Date().toISOString() }])
     setInput('')
     emitTypingStop()
     setSending(true)
-
     sendMessage(body, tempId)
 
-    // Scroll to bottom immediately when sending
     requestAnimationFrame(() => {
       if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     })
 
-    // Fallback: clear optimistic after 6s if socket never confirms
     setTimeout(() => {
       setPending(prev => prev.filter(m => m.tempId !== tempId))
       setSending(false)
-    }, 6000)
-  }, [input, sending, user?.id, sendMessage])
+    }, 6_000)
+  }, [input, sending, filePreview, user?.id, sendMessage, conversationId, revokeBlobUrl])
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -122,14 +268,14 @@ export default function ChatView() {
     ? `/client/contracts/${conv?.contract_id}`
     : `/freelancer/contracts/${conv?.contract_id}`
 
+  const canSend = !sending && (input.trim().length > 0 || !!filePreview)
+
   return (
     <div className="flex flex-col h-full">
 
       {/* ── Header ── */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-white shrink-0">
-        {/* Mobile: back to conversations list */}
         <Link to={listPath} className="md:hidden text-slate-400 hover:text-slate-600 text-sm shrink-0">←</Link>
-        {/* Desktop: link to contract detail */}
         <Link to={contractPath} className="hidden md:block text-slate-400 hover:text-slate-600 text-sm shrink-0">←</Link>
 
         {otherUser && (
@@ -164,10 +310,7 @@ export default function ChatView() {
       </div>
 
       {/* ── Messages ── */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4"
-      >
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4">
         {loadingMsgs ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-sm text-slate-400">Loading messages…</p>
@@ -179,7 +322,13 @@ export default function ChatView() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {/* oldest messages at top */}
+            {isFetchingNextPage && (
+              <div className="flex justify-center py-1">
+                <span className="text-xs text-slate-400 bg-gray-200 rounded-full px-3 py-0.5">
+                  Loading older messages…
+                </span>
+              </div>
+            )}
             {messages.map((msg, i) => (
               <MessageBubble
                 key={msg.id}
@@ -188,55 +337,102 @@ export default function ChatView() {
                 showTime={shouldShowTime(messages, i)}
               />
             ))}
-            {/* pending (optimistic) messages always at the very bottom */}
             {pendingMsgs.map(msg => (
               <MessageBubble key={msg.tempId} message={msg} isOwn sending />
             ))}
-            {/* WhatsApp-style typing indicator bubble */}
             {typing && <TypingBubble />}
           </div>
         )}
       </div>
 
+      {/* ── File preview bar ── */}
+      {filePreview && (
+        <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-4 py-2.5 flex items-center gap-3">
+          {filePreview.type === 'image' && (
+            <img src={filePreview.blobUrl} alt={filePreview.name}
+              className="h-14 w-14 rounded-lg object-cover shrink-0 border border-slate-200" />
+          )}
+          {filePreview.type === 'video' && (
+            <div className="h-14 w-14 rounded-lg bg-slate-200 flex items-center justify-center shrink-0 border border-slate-200">
+              <VideoIcon className="w-6 h-6 text-slate-500" />
+            </div>
+          )}
+          {filePreview.type === 'file' && (
+            <div className="h-14 w-14 rounded-lg bg-slate-200 flex items-center justify-center shrink-0 border border-slate-200">
+              <FileIcon className="w-6 h-6 text-slate-500" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-slate-700 truncate">{filePreview.name}</p>
+            <p className="text-xs text-slate-400">{formatFileSize(filePreview.size)}</p>
+          </div>
+          <button
+            type="button"
+            onClick={clearFilePreview}
+            className="h-7 w-7 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-500 transition-colors shrink-0"
+            aria-label="Remove file"
+          >
+            <XIcon className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* ── Input ── */}
       <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3">
         <div className="flex items-end gap-2">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ALL_ACCEPT}
+            onChange={handleFileSelect}
+            className="hidden"
+            aria-label="Attach file"
+          />
+          {/* Attach button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={sending}
+            title="Attach image, video, or document"
+            className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-400 flex items-center justify-center hover:bg-slate-50 hover:text-slate-600 disabled:opacity-40 transition-colors shrink-0"
+          >
+            <PaperclipIcon className="w-4 h-4" />
+          </button>
+
           <textarea
             ref={inputRef}
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message… (Enter to send)"
+            placeholder={filePreview ? 'Add a caption… (optional)' : 'Type a message… (Enter to send)'}
             rows={1}
             className="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-400 max-h-32 overflow-y-auto"
             style={{ minHeight: '42px' }}
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || sending}
+            disabled={!canSend}
             className="h-10 w-10 rounded-xl bg-slate-700 text-white flex items-center justify-center hover:bg-slate-800 disabled:opacity-40 transition-colors shrink-0"
           >
-            <SendIcon />
+            {sending ? <SpinnerIcon /> : <SendIcon />}
           </button>
         </div>
-        <p className="text-xs text-slate-300 mt-1 text-center">Shift+Enter for new line</p>
+        <p className="text-xs text-slate-300 mt-1 text-center">
+          Shift+Enter for new line · Max: Images 6 MB · Videos 20 MB · Docs 25 MB
+        </p>
       </div>
     </div>
   )
 }
 
-/* ── Helpers ── */
-
-// Show a time separator when gap between messages is > 5 minutes
-function shouldShowTime(messages, index) {
-  if (index === 0) return true
-  const prev = new Date(messages[index - 1].created_at)
-  const curr = new Date(messages[index].created_at)
-  return curr - prev > 5 * 60 * 1000
-}
-
-/* ── Message bubble ── */
+/* ── Message bubble ────────────────────────────────────────────────────────── */
 function MessageBubble({ message, isOwn, sending = false, showTime = false }) {
+  const type       = message.type || 'text'
+  // Use file_url (from server accessor) or fall back to file_path (blob URL for optimistic preview)
+  const displayUrl = message.file_url || message.file_path
+  const hasText    = message.body && message.body.trim().length > 0
+
   return (
     <>
       {showTime && (
@@ -248,14 +444,82 @@ function MessageBubble({ message, isOwn, sending = false, showTime = false }) {
       )}
       <div className={cn('flex items-end gap-1.5', isOwn ? 'justify-end' : 'justify-start')}>
         <div className={cn(
-          'max-w-[72%] rounded-2xl px-4 py-2 text-sm leading-relaxed shadow-sm',
+          'max-w-[72%] rounded-2xl shadow-sm overflow-hidden',
           isOwn
             ? 'bg-slate-700 text-white rounded-br-sm'
             : 'bg-white border border-slate-100 text-slate-800 rounded-bl-sm',
           sending && 'opacity-60'
         )}>
-          <p className="whitespace-pre-wrap break-words">{message.body}</p>
-          <div className={cn('flex items-center gap-1 mt-0.5', isOwn ? 'justify-end' : 'justify-start')}>
+
+          {/* Image */}
+          {type === 'image' && displayUrl && (
+            <button
+              type="button"
+              onClick={() => window.open(displayUrl, '_blank')}
+              className="block w-full"
+            >
+              <img
+                src={displayUrl}
+                alt={message.file_name || 'Image'}
+                className="max-w-full max-h-64 w-auto object-contain cursor-zoom-in"
+              />
+            </button>
+          )}
+
+          {/* Video */}
+          {type === 'video' && displayUrl && (
+            <video
+              src={displayUrl}
+              controls
+              className="max-w-full max-h-64 w-auto"
+              preload="metadata"
+            />
+          )}
+
+          {/* File / Document */}
+          {type === 'file' && (
+            <a
+              href={displayUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(
+                'flex items-center gap-3 px-4 py-3 hover:opacity-80 transition-opacity',
+                !displayUrl && 'pointer-events-none'
+              )}
+            >
+              <div className={cn(
+                'h-9 w-9 rounded-lg flex items-center justify-center shrink-0',
+                isOwn ? 'bg-white/15' : 'bg-slate-100'
+              )}>
+                <FileIcon className={cn('w-4 h-4', isOwn ? 'text-white' : 'text-slate-500')} />
+              </div>
+              <div className="min-w-0">
+                <p className={cn('text-sm font-medium truncate max-w-[180px]', isOwn ? 'text-white' : 'text-slate-700')}>
+                  {message.file_name || 'File'}
+                </p>
+                <p className={cn('text-xs mt-0.5', isOwn ? 'text-white/70' : 'text-slate-400')}>
+                  {formatFileSize(message.file_size)}
+                </p>
+              </div>
+            </a>
+          )}
+
+          {/* Text body (also shown as caption for file messages) */}
+          {hasText && (
+            <p className={cn(
+              'text-sm whitespace-pre-wrap break-words px-4 py-2',
+              type !== 'text' && 'pt-1'
+            )}>
+              {message.body}
+            </p>
+          )}
+
+          {/* Timestamp row */}
+          <div className={cn(
+            'flex items-center gap-1 px-4 pb-2',
+            isOwn ? 'justify-end' : 'justify-start',
+            !hasText && type === 'text' && 'pt-2'
+          )}>
             <span className={cn('text-[10px] leading-none', isOwn ? 'text-slate-300' : 'text-slate-400')}>
               {timeAgo(message.created_at)}
             </span>
@@ -290,15 +554,31 @@ function TypingBubble() {
       `}</style>
       <div className="flex justify-start">
         <div className="bg-white border border-slate-100 rounded-2xl rounded-bl-sm shadow-sm px-4 py-3 flex items-center gap-1.5">
-          <span className="typing-dot" />
-          <span className="typing-dot" />
-          <span className="typing-dot" />
+          <span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" />
         </div>
       </div>
     </>
   )
 }
 
+/* ── Helpers ── */
+function shouldShowTime(messages, index) {
+  if (index === 0) return true
+  const prev = new Date(messages[index - 1].created_at)
+  const curr = new Date(messages[index].created_at)
+  return curr - prev > 5 * 60 * 1000
+}
+
+function formatTime(iso) {
+  const d   = new Date(iso)
+  const now = new Date()
+  const isToday = d.toDateString() === now.toDateString()
+  return isToday
+    ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+/* ── Inline SVG icons ── */
 function SendIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -307,13 +587,43 @@ function SendIcon() {
   )
 }
 
-function formatTime(iso) {
-  const d = new Date(iso)
-  const now = new Date()
-  const isToday = d.toDateString() === now.toDateString()
-  if (isToday) {
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  }
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
-    ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+function SpinnerIcon() {
+  return (
+    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+    </svg>
+  )
+}
+
+function PaperclipIcon({ className }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
+    </svg>
+  )
+}
+
+function FileIcon({ className }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+    </svg>
+  )
+}
+
+function VideoIcon({ className }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+    </svg>
+  )
+}
+
+function XIcon({ className }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+    </svg>
+  )
 }

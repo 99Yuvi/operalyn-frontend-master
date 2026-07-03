@@ -26,6 +26,7 @@ export const contractKeys = {
 
 export const conversationKeys = {
   all:      ()         => ['conversations'],
+  list:     (search)   => ['conversations', 'list', search ?? ''],
   messages: (id)       => ['conversations', id, 'messages'],
 }
 
