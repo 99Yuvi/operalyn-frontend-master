@@ -22,6 +22,10 @@ export default function RequireAuth({ role }) {
 
   if (isLoading) return <PageSkeleton />
   if (!user) return <Navigate to="/auth/login" replace />
+
+  // Block unverified users from accessing any protected route
+  if (!user.email_verified_at) return <Navigate to="/auth/verify-email" replace />
+
   if (role && user.role !== role) return <Navigate to="/403" replace />
 
   return <Outlet />

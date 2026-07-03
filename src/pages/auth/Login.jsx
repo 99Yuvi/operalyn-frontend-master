@@ -31,8 +31,12 @@ export default function Login() {
       const roleRedirect = { client: '/client', freelancer: '/freelancer', admin: '/admin' }
       navigate(roleRedirect[data.user.role] ?? '/')
     } catch (err) {
-      // Email not verified — redirect to verify page
+      // Email not verified — fetch user (session still exists), set auth state, redirect to verify
       if (err?.code === 'email_not_verified') {
+        try {
+          const { data } = await getMe()
+          await login(data.user, data.profile)
+        } catch {}
         navigate('/auth/verify-email')
         return
       }
