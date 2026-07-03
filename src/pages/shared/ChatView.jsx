@@ -1,6 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
+
+// Lazy-loaded so the emoji data (~large) doesn't bloat the main bundle —
+// it downloads only the first time the user opens the picker
+const EmojiPicker = lazy(() => import('emoji-picker-react'))
 import { useAuth } from '@/contexts/AuthContext'
 import { useConversation } from '@/hooks/useConversation'
 import { getConversation, getMessages, markConversationRead, uploadChatFile } from '@/api/conversations'
@@ -28,7 +32,8 @@ const ACCEPTED_EXTENSIONS = {
 const MAX_BYTES = { image: 6 * 1024 * 1024, video: 20 * 1024 * 1024, file: 25 * 1024 * 1024 }
 const MAX_LABEL = { image: '6 MB', video: '20 MB', file: '25 MB' }
 
-const ALL_ACCEPT = [...ACCEPTED_EXTENSIONS.image, ...ACCEPTED_EXTENSIONS.video, ...ACCEPTED_EXTENSIONS.file].join(',')
+const MEDIA_ACCEPT = [...ACCEPTED_EXTENSIONS.image, ...ACCEPTED_EXTENSIONS.video].join(',')
+const DOC_ACCEPT   = ACCEPTED_EXTENSIONS.file.join(',')
 
 function detectType(mimeType) {
   if (ACCEPTED_EXTENSIONS.image.includes(mimeType)) return 'image'
@@ -50,7 +55,10 @@ export default function ChatView() {
   const { user }            = useAuth()
   const scrollRef           = useRef(null)
   const inputRef            = useRef(null)
-  const fileInputRef        = useRef(null)
+  const mediaInputRef       = useRef(null)   // image + video picker
+  const docInputRef         = useRef(null)   // document picker
+  const attachMenuRef       = useRef(null)
+  const emojiMenuRef        = useRef(null)
   const isFirstScroll       = useRef(true)
   const blobUrlsRef         = useRef(new Map())   // tempId → blobUrl for cleanup
 
@@ -58,11 +66,22 @@ export default function ChatView() {
   const [sending, setSending]     = useState(false)
   const [pendingMsgs, setPending] = useState([])
   const [filePreview, setFilePreview] = useState(null)   // { file, blobUrl, type, name, size }
+  const [attachOpen, setAttachOpen]   = useState(false)
+  const [emojiOpen, setEmojiOpen]     = useState(false)
+
+  // Close attach / emoji menus on outside click
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target)) setAttachOpen(false)
+      if (emojiMenuRef.current && !emojiMenuRef.current.contains(e.target)) setEmojiOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [])
 
   const clearFilePreview = useCallback(() => {
     if (filePreview?.blobUrl) URL.revokeObjectURL(filePreview.blobUrl)
     setFilePreview(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
   }, [filePreview])
 
   const revokeBlobUrl = useCallback((tempId) => {
@@ -151,25 +170,47 @@ export default function ChatView() {
     }
   }, [messages.length, pendingMsgs.length, typing])
 
-  /* ── File selection ─────────────────────────────────────────────────── */
-  const handleFileSelect = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
+  /* ── File selection (picker, paste) ─────────────────────────────────── */
+  const acceptFile = (file) => {
     const type    = detectType(file.type)
     const maxSize = MAX_BYTES[type]
 
     if (file.size > maxSize) {
       const label = type === 'image' ? 'Images' : type === 'video' ? 'Videos' : 'Documents'
       alert(`${label} must be under ${MAX_LABEL[type]}.\n\nSelected file: ${formatFileSize(file.size)}`)
-      e.target.value = ''
       return
     }
 
     if (filePreview?.blobUrl) URL.revokeObjectURL(filePreview.blobUrl)
     const blobUrl = URL.createObjectURL(file)
     setFilePreview({ file, blobUrl, type, name: file.name, size: file.size })
+  }
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0]
+    if (file) acceptFile(file)
     e.target.value = ''
+  }
+
+  const handlePaste = (e) => {
+    const file = e.clipboardData?.files?.[0]
+    if (!file) return   // plain text paste — let the browser handle it
+    e.preventDefault()
+    acceptFile(file)
+  }
+
+  /* ── Emoji insert at cursor position ────────────────────────────────── */
+  const insertEmoji = (emoji) => {
+    const el = inputRef.current
+    if (!el) { setInput(v => v + emoji); return }
+    const start = el.selectionStart ?? input.length
+    const end   = el.selectionEnd ?? input.length
+    setInput(input.slice(0, start) + emoji + input.slice(end))
+    requestAnimationFrame(() => {
+      el.focus()
+      const pos = start + emoji.length
+      el.setSelectionRange(pos, pos)
+    })
   }
 
   /* ── Typing debounce ────────────────────────────────────────────────── */
@@ -201,7 +242,6 @@ export default function ChatView() {
         created_at: new Date().toISOString(),
       }])
       setFilePreview(null)   // clear preview bar (blobUrl now tracked in blobUrlsRef)
-      if (fileInputRef.current) fileInputRef.current.value = ''
       setSending(true)
 
       requestAnimationFrame(() => {
@@ -377,49 +417,114 @@ export default function ChatView() {
         </div>
       )}
 
-      {/* ── Input ── */}
+      {/* ── Composer ── */}
       <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3">
-        <div className="flex items-end gap-2">
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ALL_ACCEPT}
-            onChange={handleFileSelect}
-            className="hidden"
-            aria-label="Attach file"
-          />
-          {/* Attach button */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={sending}
-            title="Attach image, video, or document"
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-400 flex items-center justify-center hover:bg-slate-50 hover:text-slate-600 disabled:opacity-40 transition-colors shrink-0"
-          >
-            <PaperclipIcon className="w-4 h-4" />
-          </button>
+        {/* Hidden file inputs */}
+        <input ref={mediaInputRef} type="file" accept={MEDIA_ACCEPT} onChange={handleFileSelect} className="hidden" aria-label="Attach image or video" />
+        <input ref={docInputRef} type="file" accept={DOC_ACCEPT} onChange={handleFileSelect} className="hidden" aria-label="Attach document" />
 
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm focus-within:border-slate-300 focus-within:ring-2 focus-within:ring-slate-100 transition-shadow">
+          {/* Textarea */}
           <textarea
             ref={inputRef}
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder={filePreview ? 'Add a caption… (optional)' : 'Type a message… (Enter to send)'}
-            rows={1}
-            className="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-400 max-h-32 overflow-y-auto"
-            style={{ minHeight: '42px' }}
+            onPaste={handlePaste}
+            placeholder={filePreview ? 'Add a caption… (optional)' : 'Type your message… (Ctrl+V to paste image or file)'}
+            rows={2}
+            className="w-full bg-transparent px-4 pt-3 pb-1 text-sm text-slate-700 placeholder:text-slate-400 resize-none focus:outline-none max-h-40 overflow-y-auto rounded-t-2xl"
           />
-          <button
-            onClick={handleSend}
-            disabled={!canSend}
-            className="h-10 w-10 rounded-xl bg-slate-700 text-white flex items-center justify-center hover:bg-slate-800 disabled:opacity-40 transition-colors shrink-0"
-          >
-            {sending ? <SpinnerIcon /> : <SendIcon />}
-          </button>
+
+          {/* Toolbar */}
+          <div className="flex items-center gap-0.5 px-2 pb-2">
+            {/* Attach — dropdown menu */}
+            <div className="relative" ref={attachMenuRef}>
+              <button
+                type="button"
+                onClick={() => { setEmojiOpen(false); setAttachOpen(o => !o) }}
+                disabled={sending}
+                title="Attach a file"
+                className={cn(
+                  'h-8 w-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40',
+                  attachOpen ? 'bg-slate-100 text-slate-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                )}
+              >
+                <PaperclipIcon className="w-4 h-4" />
+              </button>
+              {attachOpen && (
+                <div className="absolute bottom-10 left-0 z-20 w-48 rounded-xl border border-slate-200 bg-white shadow-lg py-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { setAttachOpen(false); mediaInputRef.current?.click() }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2 text-sm text-slate-600 hover:bg-slate-50 text-left"
+                  >
+                    <ImageIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                    Image &amp; Video
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAttachOpen(false); docInputRef.current?.click() }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2 text-sm text-slate-600 hover:bg-slate-50 text-left"
+                  >
+                    <FileIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                    Document
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Emoji picker */}
+            <div className="relative" ref={emojiMenuRef}>
+              <button
+                type="button"
+                onClick={() => { setAttachOpen(false); setEmojiOpen(o => !o) }}
+                disabled={sending}
+                title="Insert emoji"
+                className={cn(
+                  'h-8 w-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40',
+                  emojiOpen ? 'bg-slate-100 text-slate-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                )}
+              >
+                <SmileIcon className="w-4 h-4" />
+              </button>
+              {emojiOpen && (
+                <div className="absolute bottom-10 left-0 z-20 max-w-[calc(100vw-3rem)] rounded-xl overflow-hidden shadow-lg">
+                  <Suspense
+                    fallback={
+                      <div className="w-[300px] h-[360px] max-w-full bg-white border border-slate-200 rounded-xl flex items-center justify-center">
+                        <p className="text-xs text-slate-400">Loading emojis…</p>
+                      </div>
+                    }
+                  >
+                    <EmojiPicker
+                      onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)}
+                      width={300}
+                      height={360}
+                      previewConfig={{ showPreview: false }}
+                      searchPlaceHolder="Search emoji…"
+                      skinTonesDisabled
+                      lazyLoadEmojis
+                    />
+                  </Suspense>
+                </div>
+              )}
+            </div>
+
+            {/* Send */}
+            <button
+              onClick={handleSend}
+              disabled={!canSend}
+              className="ml-auto h-8 px-4 rounded-lg bg-slate-700 text-white text-sm font-medium flex items-center gap-1.5 hover:bg-slate-800 disabled:opacity-40 transition-colors shrink-0"
+            >
+              {sending ? <SpinnerIcon /> : <SendIcon />}
+              Send
+            </button>
+          </div>
         </div>
-        <p className="text-xs text-slate-300 mt-1 text-center">
-          Shift+Enter for new line · Max: Images 6 MB · Videos 20 MB · Docs 25 MB
+
+        <p className="text-xs text-slate-300 mt-1.5 text-center">
+          Enter to send · Shift+Enter for new line · Images 6 MB · Videos 20 MB · Docs 25 MB
         </p>
       </div>
     </div>
@@ -608,6 +713,22 @@ function FileIcon({ className }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+    </svg>
+  )
+}
+
+function ImageIcon({ className }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+    </svg>
+  )
+}
+
+function SmileIcon({ className }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z" />
     </svg>
   )
 }
