@@ -2,6 +2,8 @@ import { io } from 'socket.io-client'
 
 const CHAT_URL = import.meta.env.VITE_CHAT_URL || 'http://localhost:3001'
 
+console.log('[SOCKET] Chat server URL:', CHAT_URL)
+
 let socket = null
 
 /** Get (or create) the singleton socket connection with the current Sanctum token */
@@ -13,6 +15,8 @@ export function getSocket(token) {
     socket = null
   }
 
+  console.log('[SOCKET] Connecting to', CHAT_URL, '— token:', token ? token.slice(0, 12) + '…' : 'MISSING')
+
   socket = io(CHAT_URL, {
     autoConnect:  true,
     reconnection: true,
@@ -23,7 +27,7 @@ export function getSocket(token) {
   })
 
   socket.on('connect',       () => console.log('[SOCKET] Connected:', socket.id))
-  socket.on('connect_error', (err) => console.warn('[SOCKET] Error:', err.message))
+  socket.on('connect_error', (err) => console.error('[SOCKET] Error:', err.message, err))
   socket.on('disconnect',    (r)   => console.log('[SOCKET] Disconnected:', r))
 
   return socket

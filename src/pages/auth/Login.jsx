@@ -27,7 +27,7 @@ export default function Login() {
     try {
       await apiLogin(form)
       const { data } = await getMe()
-      login(data.user, data.profile)
+      await login(data.user, data.profile)   // await so socketToken is set BEFORE navigation
       const roleRedirect = { client: '/client', freelancer: '/freelancer', admin: '/admin' }
       navigate(roleRedirect[data.user.role] ?? '/')
     } catch (err) {
