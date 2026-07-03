@@ -31,6 +31,11 @@ export default function Login() {
       const roleRedirect = { client: '/client', freelancer: '/freelancer', admin: '/admin' }
       navigate(roleRedirect[data.user.role] ?? '/')
     } catch (err) {
+      // Email not verified — redirect to verify page
+      if (err?.code === 'email_not_verified') {
+        navigate('/auth/verify-email')
+        return
+      }
       setError(err?.message ?? 'Invalid credentials.')
     } finally {
       setLoading(false)
