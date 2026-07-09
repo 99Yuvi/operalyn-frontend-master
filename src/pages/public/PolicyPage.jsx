@@ -6,10 +6,13 @@ export const C = {
   accent: '#334155', border: '#E2E8F0',
 }
 
+// Values must match the Certificate of Incorporation (CIN) and
+// GST certificate (address = Principal Place of Business) exactly.
 export const COMPANY = {
   name:    'Operalyn Freelance Network Services Private Limited',
-  cin:     'U62020RI2026PTC113939',
-  address: 'Unit No. TB-404, 4th Floor, R-Tech Capital Highstreet Mall\nMahal Road, Jagatpura, Jaipur, Rajasthan – 302017',
+  cin:     'U62020RJ2026PTC113939',
+  gst:     '08AAFCO1644L1Z8',
+  address: 'CPI-231, Appreal Park, RIICO Area Sitapura, Unit No. TB-404, 4th Floor,\nR-Tech Capital Highstreet Mall, Mahal Road, Jagatpura, Jaipur, Rajasthan – 302017',
   email:   'operalyn.freelancenetwork@gmail.com',
 }
 
@@ -20,6 +23,14 @@ export const COMPANY = {
 export default function PolicyPage({ label = 'Legal', title, updated = '1 July 2026', intro, sections, related = [], children }) {
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif", background: C.ground, color: C.text, overflowX: 'hidden' }}>
+
+      {/* Company name strip — full legal name visible on first interaction */}
+      <div style={{
+        background: '#0F172A', color: '#CBD5E1', textAlign: 'center',
+        padding: '7px 16px', fontSize: 11.5, fontWeight: 500, letterSpacing: '0.05em',
+      }}>
+        {COMPANY.name.toUpperCase()}
+      </div>
 
       {/* Nav */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.border}` }}>

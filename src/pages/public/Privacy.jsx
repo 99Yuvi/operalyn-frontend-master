@@ -137,8 +137,8 @@ To exercise any of these rights, contact us at operalyn.freelancenetwork@gmail.c
 
 Jitendra Kumar
 Director, Operalyn Freelance Network Services Private Limited
-Unit No. TB-404, 4th Floor, R-Tech Capital Highstreet Mall
-Mahal Road, Jagatpura, Jaipur, Rajasthan – 302017
+CPI-231, Appreal Park, RIICO Area Sitapura, Unit No. TB-404, 4th Floor,
+R-Tech Capital Highstreet Mall, Mahal Road, Jagatpura, Jaipur, Rajasthan – 302017
 Email: operalyn.freelancenetwork@gmail.com
 Phone: +91 72406 95689
 
@@ -149,6 +149,11 @@ The Grievance Officer shall acknowledge your complaint within 24 hours and resol
 export default function Privacy() {
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif", background: C.ground, color: C.text, overflowX: 'hidden' }}>
+
+      {/* Company name strip */}
+      <div style={{ background: '#0F172A', color: '#CBD5E1', textAlign: 'center', padding: '7px 16px', fontSize: 11.5, fontWeight: 500, letterSpacing: '0.05em' }}>
+        OPERALYN FREELANCE NETWORK SERVICES PRIVATE LIMITED
+      </div>
 
       {/* Nav */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.border}` }}>
