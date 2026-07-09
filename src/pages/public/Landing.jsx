@@ -860,7 +860,17 @@ export default function Landing() {
             <div>
               <p style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 14, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Company</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                {[['About us', '/about'], ['Terms of service', '/terms'], ['Privacy policy', '/privacy'], ['Contact us', '/about']].map(([label, to]) => (
+                {[
+                  ['About us', '/about'],
+                  ['Contact us', '/contact'],
+                  ['Pricing', '/pricing'],
+                  ['Terms of service', '/terms'],
+                  ['Privacy policy', '/privacy'],
+                  ['Refund policy', '/refund-policy'],
+                  ['Cancellation policy', '/cancellation-policy'],
+                  ['Freelancer agreement', '/freelancer-agreement'],
+                  ['Client agreement', '/client-agreement'],
+                ].map(([label, to]) => (
                   <Link key={label} to={to} style={{ fontSize: 13, color: C.muted, textDecoration: 'none', transition: 'color 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.color = C.text}
                     onMouseLeave={e => e.currentTarget.style.color = C.muted}>

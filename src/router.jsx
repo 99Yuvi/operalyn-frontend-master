@@ -1,5 +1,18 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Outlet, ScrollRestoration } from 'react-router-dom'
 import RequireAuth from '@/components/shared/RequireAuth'
+
+/**
+ * Root wrapper for every route — ScrollRestoration scrolls to top on each
+ * navigation (e.g. footer links) and restores position on back/forward.
+ */
+function Root() {
+  return (
+    <>
+      <ScrollRestoration />
+      <Outlet />
+    </>
+  )
+}
 
 // Auth
 import Login           from '@/pages/auth/Login'
@@ -52,19 +65,33 @@ import PaymentHistory          from '@/pages/shared/PaymentHistory'
 import ReviewForm              from '@/pages/shared/ReviewForm'
 
 // Public
-import Landing  from '@/pages/public/Landing'
-import About    from '@/pages/public/About'
-import Terms    from '@/pages/public/Terms'
-import Privacy  from '@/pages/public/Privacy'
+import Landing             from '@/pages/public/Landing'
+import About               from '@/pages/public/About'
+import Terms               from '@/pages/public/Terms'
+import Privacy             from '@/pages/public/Privacy'
+import RefundPolicy        from '@/pages/public/RefundPolicy'
+import CancellationPolicy  from '@/pages/public/CancellationPolicy'
+import Pricing             from '@/pages/public/Pricing'
+import Contact             from '@/pages/public/Contact'
+import FreelancerAgreement from '@/pages/public/FreelancerAgreement'
+import ClientAgreement     from '@/pages/public/ClientAgreement'
 import NotFound from '@/pages/errors/NotFound'
 import Forbidden from '@/pages/errors/Forbidden'
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter([{
+  element: <Root />,
+  children: [
   // ── Public landing ────────────────────────────────────────────────────
   { path: '/',                     element: <Landing /> },
   { path: '/about',                element: <About /> },
   { path: '/terms',                element: <Terms /> },
   { path: '/privacy',              element: <Privacy /> },
+  { path: '/refund-policy',        element: <RefundPolicy /> },
+  { path: '/cancellation-policy',  element: <CancellationPolicy /> },
+  { path: '/pricing',              element: <Pricing /> },
+  { path: '/contact',              element: <Contact /> },
+  { path: '/freelancer-agreement', element: <FreelancerAgreement /> },
+  { path: '/client-agreement',     element: <ClientAgreement /> },
   { path: '/auth/login',           element: <Login /> },
   { path: '/auth/register',        element: <Register /> },
   { path: '/auth/forgot-password', element: <ForgotPassword /> },
@@ -139,4 +166,5 @@ export const router = createBrowserRouter([
 
   { path: '/403', element: <Forbidden /> },
   { path: '*',    element: <NotFound /> },
-])
+  ],
+}])

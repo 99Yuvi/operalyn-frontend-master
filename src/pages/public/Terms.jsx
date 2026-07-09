@@ -141,6 +141,11 @@ export default function Terms() {
           <p style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 12 }}>Related documents</p>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <Link to="/privacy" style={{ fontSize: 13, color: C.accent, textDecoration: 'none', fontWeight: 500 }}>Privacy Policy →</Link>
+            <Link to="/refund-policy" style={{ fontSize: 13, color: C.accent, textDecoration: 'none', fontWeight: 500 }}>Refund Policy →</Link>
+            <Link to="/cancellation-policy" style={{ fontSize: 13, color: C.accent, textDecoration: 'none', fontWeight: 500 }}>Cancellation Policy →</Link>
+            <Link to="/pricing" style={{ fontSize: 13, color: C.accent, textDecoration: 'none', fontWeight: 500 }}>Pricing →</Link>
+            <Link to="/freelancer-agreement" style={{ fontSize: 13, color: C.accent, textDecoration: 'none', fontWeight: 500 }}>Freelancer Agreement →</Link>
+            <Link to="/client-agreement" style={{ fontSize: 13, color: C.accent, textDecoration: 'none', fontWeight: 500 }}>Client Agreement →</Link>
             <Link to="/about" style={{ fontSize: 13, color: C.accent, textDecoration: 'none', fontWeight: 500 }}>About Operalyn →</Link>
           </div>
         </div>
