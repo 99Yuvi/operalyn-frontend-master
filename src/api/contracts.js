@@ -17,8 +17,9 @@ export const deliverMilestone  = (id, data)         => {
   }
   return api.post(`/milestones/${id}/deliver`, fd)
 }
-export const approveMilestone        = (id)    => api.post(`/milestones/${id}/approve`)
-export const requestMilestoneRevision = (id, data) => api.post(`/milestones/${id}/request-revision`, data)
+export const payMilestone      = (id, gateway) => api.post(`/milestones/${id}/pay`, { gateway })
+export const verifyMilestonePayment = (id, data) => api.post(`/milestones/${id}/verify-payment`, data)
+export const releaseMilestone  = (id)       => api.post(`/milestones/${id}/release`)
 
 /* ── File download ── */
 export const getDeliveryFileUrl = (deliveryId, fileId) =>

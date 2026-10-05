@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMyProject } from '@/hooks/useProjects'
-import { useProjectProposals, useShortlistProposal, useRejectProposal, useAcceptProposal } from '@/hooks/useProposals'
+import { useProjectProposals, useAcceptProposal } from '@/hooks/useProposals'
 import { formatCurrency, formatDate, getInitials, getAvatarColor } from '@/lib/utils'
+import { usePayForMilestone } from '@/hooks/usePayForMilestone'
 
 const STATUS_COLOR = {
   pending:     'bg-yellow-50 text-yellow-700',
@@ -21,9 +22,8 @@ export default function ClientProjectDetail() {
   const { data: projData, isLoading: projLoading } = useMyProject(id)
   const { data: propData, isLoading: propLoading } = useProjectProposals(id)
 
-  const shortlist = useShortlistProposal(id)
-  const reject    = useRejectProposal(id)
   const accept    = useAcceptProposal(id)
+  const { pay: payFor, pickerEl } = usePayForMilestone()
 
   const project   = projData?.data
   const proposals = propData?.data ?? []
@@ -31,19 +31,29 @@ export default function ClientProjectDetail() {
   if (projLoading) return <div className="text-sm text-slate-400 py-10 text-center">Loading…</div>
   if (!project)    return <div className="text-sm text-red-500 py-10 text-center">Project not found.</div>
 
-  const handleAccept = async (proposalId) => {
-    if (!window.confirm('Hire this freelancer? All other proposals will be closed.')) return
+  const handleAccept = async (proposal) => {
+    if (!window.confirm(`Accept this offer and pay ${formatCurrency(proposal.bid_amount)} now? Other offers will be closed. The money is held safely until you release it.`)) return
     setHireError(null)
+    let res
     try {
-      const res = await accept.mutateAsync(proposalId)
-      navigate(`/client/contracts/${res.data?.contract_id ?? ''}`)
+      res = await accept.mutateAsync(proposal.id)
     } catch (err) {
-      setHireError(err?.response?.data?.message ?? 'Something went wrong. Please try again.')
+      setHireError(err?.message ?? 'Something went wrong. Please try again.')
+      return
     }
+
+    const contractId = res.data?.contract_id
+    try {
+      await payFor(res.data?.milestone_id, project.title)
+    } catch {
+      // Offer is already accepted; if payment didn't finish the contract page has a Pay button
+    }
+    navigate(`/client/contracts/${contractId ?? ''}`)
   }
 
   return (
     <div>
+      {pickerEl}
       {/* Header */}
       <div className="flex items-center gap-2 mb-5">
         <Link to="/client/projects" className="text-slate-400 hover:text-slate-600 text-sm">← Projects</Link>
@@ -145,33 +155,12 @@ export default function ClientProjectDetail() {
                       <p className="text-sm text-slate-600 mt-2 line-clamp-3">{p.cover_letter}</p>
 
                       {/* Actions */}
-                      {p.status === 'pending' && (
+                      {['pending', 'shortlisted'].includes(p.status) && (
                         <div className="flex gap-2 mt-3">
-                          <button onClick={() => shortlist.mutate(p.id)}
-                            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">
-                            Shortlist
-                          </button>
-                          <button onClick={() => reject.mutate({ id: p.id })}
-                            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50">
-                            Reject
-                          </button>
-                          <button onClick={() => handleAccept(p.id)}
+                          <button onClick={() => handleAccept(p)}
                             disabled={accept.isPending}
                             className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-700 text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
-                            {accept.isPending ? 'Hiring…' : 'Hire'}
-                          </button>
-                        </div>
-                      )}
-                      {p.status === 'shortlisted' && (
-                        <div className="flex gap-2 mt-3">
-                          <button onClick={() => reject.mutate({ id: p.id })}
-                            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50">
-                            Reject
-                          </button>
-                          <button onClick={() => handleAccept(p.id)}
-                            disabled={accept.isPending}
-                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-700 text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
-                            {accept.isPending ? 'Hiring…' : 'Hire'}
+                            {accept.isPending ? 'Accepting…' : 'Accept & Pay'}
                           </button>
                         </div>
                       )}

@@ -8,6 +8,4 @@ export const getMyProposals   = (params)           => api.get('/freelancer/propo
 
 /* ── Client ── */
 export const getProjectProposals = (projectId, params) => api.get(`/client/projects/${projectId}/proposals`, { params })
-export const shortlistProposal   = (id)  => api.patch(`/client/proposals/${id}/shortlist`)
-export const rejectProposal      = (id, data) => api.patch(`/client/proposals/${id}/reject`, data)
 export const acceptProposal      = (id)  => api.post(`/client/proposals/${id}/accept`)

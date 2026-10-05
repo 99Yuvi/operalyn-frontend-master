@@ -31,22 +31,6 @@ export const useWithdrawProposal = () => {
   })
 }
 
-export const useShortlistProposal = (projectId) => {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: api.shortlistProposal,
-    onSuccess:  () => qc.invalidateQueries({ queryKey: proposalKeys.forProject(projectId) }),
-  })
-}
-
-export const useRejectProposal = (projectId) => {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, ...data }) => api.rejectProposal(id, data),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: proposalKeys.forProject(projectId) }),
-  })
-}
-
 export const useAcceptProposal = (projectId) => {
   const qc = useQueryClient()
   return useMutation({

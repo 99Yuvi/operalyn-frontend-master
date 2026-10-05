@@ -44,21 +44,13 @@ export const useDeliverMilestone = (contractId) => {
   })
 }
 
-export const useApproveMilestone = (contractId) => {
+export const useReleaseMilestone = (contractId) => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: api.approveMilestone,
+    mutationFn: api.releaseMilestone,
     onSuccess:  () => {
       invalidate(qc, contractId)
       qc.invalidateQueries({ queryKey: contractKeys.list({}) })
     },
-  })
-}
-
-export const useRequestRevision = (contractId) => {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, ...data }) => api.requestMilestoneRevision(id, data),
-    onSuccess:  () => invalidate(qc, contractId),
   })
 }

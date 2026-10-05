@@ -178,7 +178,7 @@ export default function FreelancerDashboard() {
                 {activeContracts.slice(0, 4).map(c => {
                   const ms        = c.milestones ?? []
                   const nextMs    = ms.find(m => !['approved', 'paid'].includes(m.status))
-                  const actionNeeded = nextMs && ['pending', 'revision_requested'].includes(nextMs?.status)
+                  const actionNeeded = nextMs && ['in_progress', 'revision_requested'].includes(nextMs?.status)
                   return (
                     <Link key={c.id} to={`/freelancer/contracts/${c.id}`}
                       className="block px-5 py-4 hover:bg-slate-50 transition-colors">
