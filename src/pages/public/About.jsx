@@ -295,7 +295,7 @@ export default function About() {
               ['CIN',              'U62020RJ2026PTC113939'],
               ['GST Number',       '08AAFCO1644L1Z8'],
               ['Registered Office','CPI-231, Appreal Park, RIICO Area Sitapura, Unit No. TB-404, 4th Floor, R-Tech Capital Highstreet Mall, Mahal Road, Jagatpura, Jaipur, Rajasthan – 302017'],
-              ['Contact Email',    'operalyn.freelancenetwork@gmail.com'],
+              ['Contact Email',    'operalyn.freelancenetworkss@gmail.com'],
             ].map(([key, val], i, arr) => (
               <div key={key} style={{
                 display: 'flex', gap: 20, padding: '16px 24px',

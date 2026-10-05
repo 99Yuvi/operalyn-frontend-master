@@ -13,7 +13,7 @@ export const COMPANY = {
   cin:     'U62020RJ2026PTC113939',
   gst:     '08AAFCO1644L1Z8',
   address: 'CPI-231, Appreal Park, RIICO Area Sitapura, Unit No. TB-404, 4th Floor,\nR-Tech Capital Highstreet Mall, Mahal Road, Jagatpura, Jaipur, Rajasthan – 302017',
-  email:   'operalyn.freelancenetwork@gmail.com',
+  email:   'operalyn.freelancenetworkss@gmail.com',
 }
 
 /**

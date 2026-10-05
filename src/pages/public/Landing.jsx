@@ -826,13 +826,13 @@ export default function Landing() {
                 India's professional freelance network. Milestone-based payments. INR payouts via Razorpay.
               </p>
               {/* Contact */}
-              <a href="mailto:operalyn.freelancenetwork@gmail.com" style={{
+              <a href="mailto:operalyn.freelancenetworkss@gmail.com" style={{
                 fontSize: 12, color: C.muted, textDecoration: 'none', display: 'block', marginBottom: 4,
               }}
               onMouseEnter={e => e.currentTarget.style.color = C.text}
               onMouseLeave={e => e.currentTarget.style.color = C.muted}
               >
-                📧 operalyn.freelancenetwork@gmail.com
+                📧 operalyn.freelancenetworkss@gmail.com
               </a>
             </div>
 

@@ -88,7 +88,7 @@ Any legal disputes arising from or related to these Terms or the Platform shall 
 Operalyn Freelance Network Services Private Limited
 CPI-231, Appreal Park, RIICO Area Sitapura, Unit No. TB-404, 4th Floor,
 R-Tech Capital Highstreet Mall, Mahal Road, Jagatpura, Jaipur, Rajasthan – 302017
-Email: operalyn.freelancenetwork@gmail.com`,
+Email: operalyn.freelancenetworkss@gmail.com`,
   },
 ]
 

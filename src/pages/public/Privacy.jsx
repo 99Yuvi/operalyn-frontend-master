@@ -117,7 +117,7 @@ Opt-out: Unsubscribe from promotional emails at any time via the unsubscribe lin
 
 Grievance Redressal: File a complaint with our Grievance Officer (contact details below) regarding any privacy concern.
 
-To exercise any of these rights, contact us at operalyn.freelancenetwork@gmail.com. We will respond to your request within 30 days.`,
+To exercise any of these rights, contact us at operalyn.freelancenetworkss@gmail.com. We will respond to your request within 30 days.`,
   },
   {
     title: '10. Third-Party Links',
@@ -139,7 +139,7 @@ Jitendra Kumar
 Director, Operalyn Freelance Network Services Private Limited
 CPI-231, Appreal Park, RIICO Area Sitapura, Unit No. TB-404, 4th Floor,
 R-Tech Capital Highstreet Mall, Mahal Road, Jagatpura, Jaipur, Rajasthan – 302017
-Email: operalyn.freelancenetwork@gmail.com
+Email: operalyn.freelancenetworkss@gmail.com
 Phone: +91 72406 95689
 
 The Grievance Officer shall acknowledge your complaint within 24 hours and resolve it within 15 days of receipt.`,
