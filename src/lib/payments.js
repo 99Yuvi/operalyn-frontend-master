@@ -95,5 +95,8 @@ export async function payForMilestone(milestoneId, title, gateway) {
 
   if (order.gateway === 'cashfree') return payWithCashfree(milestoneId, order)
   if (order.gateway === 'ccavenue') return payWithCcavenue(order)
-  return payWithRazorpay(milestoneId, title, order)
+  if (order.gateway === 'razorpay') return payWithRazorpay(milestoneId, title, order)
+
+  // Never guess: opening the wrong gateway with another gateway's order id just fails confusingly
+  throw new Error('This payment method is not supported yet. Please choose another one.')
 }
