@@ -3,6 +3,7 @@ import { CreditCard, X } from 'lucide-react'
 const GATEWAY_INFO = {
   razorpay: { label: 'Razorpay',  hint: 'UPI, cards, netbanking, wallets' },
   cashfree: { label: 'Cashfree',  hint: 'UPI, cards, netbanking, wallets' },
+  ccavenue: { label: 'CCAvenue',  hint: 'Cards, netbanking, UPI, wallets (opens a secure payment page)' },
 }
 
 /** Modal that asks the client which payment method to use. Only shown when more than one is available. */

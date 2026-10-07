@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
 import { useContract, useDeliverMilestone, useReleaseMilestone } from '@/hooks/useContracts'
@@ -89,6 +90,14 @@ const MS = {
   paid:                { dot: 'bg-emerald-500',badge: 'bg-emerald-50 text-emerald-700',  label: 'Released' },
 }
 
+/* ── Message shown when the browser returns from a redirect gateway (CCAvenue) ── */
+const PAYMENT_RESULT_NOTICE = {
+  success:   { style: 'bg-green-50 border-green-200 text-green-700',  text: 'Payment received. The freelancer can start work now.' },
+  failed:    { style: 'bg-red-50 border-red-200 text-red-700',        text: 'The payment did not go through. You can try again.' },
+  cancelled: { style: 'bg-slate-50 border-slate-200 text-slate-600',  text: 'Payment cancelled. You can pay whenever you are ready.' },
+  review:    { style: 'bg-amber-50 border-amber-200 text-amber-700',  text: 'We received your payment and are checking it. This will update shortly.' },
+}
+
 /* ── Contract status badge ── */
 const CS = {
   active:    'bg-blue-50 text-blue-700 border-blue-200',
@@ -134,6 +143,14 @@ export default function ContractDetail() {
   const [delivNote, setDelivNote]           = useState('')
   const [delivFiles, setDelivFiles]         = useState([])
   const [apiError, setApiError]             = useState('')
+
+  // CCAvenue sends the browser back here with ?payment=success|failed|cancelled|review
+  const [searchParams, setSearchParams]     = useSearchParams()
+  const paymentResult                       = searchParams.get('payment')
+
+  useEffect(() => {
+    if (paymentResult) qc.invalidateQueries({ queryKey: contractKeys.detail(id) })
+  }, [paymentResult, qc, id])
 
   if (isLoading) return <div className="text-sm text-slate-400 py-10 text-center">Loading contract…</div>
 
@@ -242,6 +259,13 @@ export default function ContractDetail() {
         </div>
       </div>
 
+      {PAYMENT_RESULT_NOTICE[paymentResult] && (
+        <div className={cn('mb-4 flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm', PAYMENT_RESULT_NOTICE[paymentResult].style)}>
+          <span>{PAYMENT_RESULT_NOTICE[paymentResult].text}</span>
+          <button onClick={() => setSearchParams({}, { replace: true })} className="shrink-0 text-xs underline">Dismiss</button>
+        </div>
+      )}
+
       {apiError && (
         <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{apiError}</div>
       )}
@@ -266,7 +290,7 @@ export default function ContractDetail() {
                 onRelease={() => handleRelease(m.id)}
                 paying={busyId === m.id}
                 onFilePreview={openFilePreview}
-                deliveryForm={deliveryForm}
+                deliveryForm={deliveryForm} setDeliveryForm={setDeliveryForm}
                 delivNote={delivNote} setDelivNote={setDelivNote}
                 delivFiles={delivFiles} setDelivFiles={setDelivFiles}
                 handleDeliver={handleDeliver}
@@ -284,7 +308,7 @@ export default function ContractDetail() {
 function MilestoneRow({
   milestone: m, index, isClient, isFreelancer, contractActive,
   onDeliver, onPay, onRelease, paying, onFilePreview,
-  deliveryForm,
+  deliveryForm, setDeliveryForm,
   delivNote, setDelivNote, delivFiles, setDelivFiles,
   handleDeliver,
   delivering,

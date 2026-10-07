@@ -61,6 +61,30 @@ async function payWithCashfree(milestoneId, order) {
 }
 
 /**
+ * CCAvenue is a redirect gateway: the browser POSTs an encrypted request to their hosted page,
+ * and they send it back to the backend (then on to the contract page) when done.
+ * The page unloads, so this deliberately never resolves.
+ */
+function payWithCcavenue(order) {
+  const form = document.createElement('form')
+  form.method = 'POST'
+  form.action = order.action_url
+
+  for (const [name, value] of [['encRequest', order.enc_request], ['access_code', order.access_code]]) {
+    const input = document.createElement('input')
+    input.type  = 'hidden'
+    input.name  = name
+    input.value = value
+    form.appendChild(input)
+  }
+
+  document.body.appendChild(form)
+  form.submit()
+
+  return new Promise(() => {})
+}
+
+/**
  * Pay for a milestone with the chosen gateway: create the order, open its checkout,
  * then confirm with the backend. Resolves once the payment is confirmed; rejects with an
  * Error whose message is safe to show.
@@ -70,5 +94,6 @@ export async function payForMilestone(milestoneId, title, gateway) {
   const order = res?.data
 
   if (order.gateway === 'cashfree') return payWithCashfree(milestoneId, order)
+  if (order.gateway === 'ccavenue') return payWithCcavenue(order)
   return payWithRazorpay(milestoneId, title, order)
 }
